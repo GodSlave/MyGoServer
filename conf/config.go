@@ -44,7 +44,15 @@ type Config struct {
 	Mqtt   Mqtt
 	Master Master
 	Debug  bool
+	DB  DB
 }
+
+type DB struct {
+	DBtype string
+	Url	string
+}
+
+
 
 
 type Rpc struct {

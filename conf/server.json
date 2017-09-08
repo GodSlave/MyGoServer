@@ -59,5 +59,9 @@
   "Rpc": {
     // 远程访问最后期限值 单位秒 这个值指定了在客户端可以等待服务端多长时间来应答
     "RpcExpired": 3
+  },
+  "DB": {
+    "DBtype": "mysql",
+    "Url": "mysql://127.0.0.1:3306/gameserver?autoReconnect=true&useSSL=false"
   }
 }

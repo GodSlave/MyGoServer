@@ -26,6 +26,7 @@ import (
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/opentracing/opentracing-go"
+	"encoding/json"
 )
 
 type RPCServer struct {
@@ -239,20 +240,14 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 	_func := functionInfo.Function
 
 	params := callInfo.RpcInfo.Args
-	ArgsType := callInfo.RpcInfo.ArgsType
+	//ArgsType := callInfo.RpcInfo.ArgsType
 	f := reflect.ValueOf(_func)
-	if len(params) != f.Type().NumIn() {
-		//因为在调研的 _func的时候还会额外传递一个回调函数 cb
-		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("The number of params %s is not adapted.%s", params, f.String()))
-		return
-	}
-	//if len(params) != len(callInfo.RpcInfo.ArgsType) {
+	funcType := reflect.TypeOf(_func)
+	//if len(params) != f.Type().NumIn() {
 	//	//因为在调研的 _func的时候还会额外传递一个回调函数 cb
-	//	_errorCallback(callInfo.RpcInfo.Cid,fmt.Sprintf("The number of params %s is not adapted ArgsType .%s", params, callInfo.RpcInfo.ArgsType))
+	//	_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("The number of params %s is not adapted.%s", params, f.String()))
 	//	return
 	//}
-
-	//typ := reflect.TypeOf(_func)
 
 	s.wg.Add(1)
 	s.executing++
@@ -289,21 +284,25 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		// f 为函数地址
 		var session string = ""
 		var in []reflect.Value
-		if len(ArgsType) > 0 {
-			in = make([]reflect.Value, len(params))
-			for k, v := range ArgsType {
-				if k == 0 {
-					session = string(params[k])
-					in[k] = reflect.ValueOf(session)
-				} else {
-					v, err := argsutil.Bytes2Args(s.app, v, params[k])
+		in = make([]reflect.Value, funcType.NumIn())
+
+		if len(in) > 0 && len(params) == len(in) {
+			param1type := funcType.In(0)
+			if param1type.Kind() == reflect.String {
+				in[0] = reflect.ValueOf(string(params[0]))
+			}
+
+			for k, _ := range in {
+				if k > 0 {
+					paramType := funcType.In(k)
+					log.Info(paramType.Name())
+					v := reflect.New(paramType.Elem()).Interface()
+					err := json.Unmarshal(params[k], &v)
 					if err != nil {
-						_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("args[%d] [%s] Types not allowed", k, reflect.TypeOf(params[k])))
-						return
+						panic(err)
 					}
 					in[k] = reflect.ValueOf(v)
 				}
-
 			}
 		}
 

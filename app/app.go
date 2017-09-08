@@ -17,6 +17,8 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc/base"
 	"github.com/GodSlave/MyGoServer/rpc"
 	"strings"
+	"github.com/GodSlave/MyGoServer/db"
+	"github.com/go-xorm/xorm"
 )
 
 func NewApp() module.App {
@@ -46,9 +48,10 @@ type DefaultApp struct {
 	routes        map[string]func(app module.App, Type string, hash string) module.ServerSession
 	defaultRoutes func(app module.App, Type string, hash string) module.ServerSession
 	rpcserializes map[string]module.RPCSerialize
+	Engine  *xorm.Engine
 }
 
-func (app *DefaultApp) Run(mods ...module.Module) error {
+func (app *DefaultApp) Run( mods ...module.Module) error {
 	file, _ := exec.LookPath(os.Args[0])
 	ApplicationPath, _ := filepath.Abs(file)
 	ApplicationDir, _ := filepath.Split(ApplicationPath)
@@ -75,6 +78,15 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
 	log.Info("mqant %v starting up", app.version)
 
+	//sql
+	sql := db.BaseSql{
+		Url: "root:woaini123@/gameserver?charset=utf8",
+	}
+	//sql.Url = conf.Conf.DB
+	sql.InitDB()
+	sql.CheckMigrate()
+	app.Engine = sql.Engine
+
 	manager := basemodule.NewModuleManager()
 	manager.RegisterRunMod(modules.TimerModule())
 	// module
@@ -90,6 +102,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	manager.Destroy()
 	app.OnDestroy()
 	log.Info("mqant closing down (signal: %v)", sig)
+
 	return nil
 }
 
@@ -246,4 +259,8 @@ func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType strin
 		return
 	}
 	return server.CallNRArgs(_func, ArgsType, args)
+}
+
+func (app *DefaultApp) GetSqlEngine() *xorm.Engine  {
+	return app.Engine
 }

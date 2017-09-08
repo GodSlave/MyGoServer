@@ -16,6 +16,7 @@ package module
 import (
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/rpc"
+	"github.com/go-xorm/xorm"
 )
 
 type ServerSession interface {
@@ -56,6 +57,8 @@ type App interface {
 	AddRPCSerialize(name string, Interface RPCSerialize) error
 
 	GetRPCSerialize() (map[string]RPCSerialize)
+
+	GetSqlEngine() *xorm.Engine
 }
 
 type Module interface {

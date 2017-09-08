@@ -54,19 +54,31 @@ func (m *ModuleUser) OnDestroy() {
 	m.GetServer().OnDestroy()
 }
 
-func (m *ModuleUser) Login(SessionId string, msg map[string]interface{}) (result string, err string) {
-	name := msg["Name"].(string)
-	password := msg["Password"].(string)
-	if name == password {
+type LoginForm struct {
+	Name     string    `json:"name"`
+	Password string `json:"password"`
+}
+
+type RegisterForm struct {
+	Name       string `json:"name"`
+	Password   string `json:"password"`
+	VerifyCode string `json:"verifyCode"`
+}
+
+func (m *ModuleUser) Login(SessionId string, form *LoginForm) (result string, err string) {
+	if form.Name == form.Password {
 		conn := m.redisPool.Get()
-		_, err1 := conn.Do("SET", SessionId, name)
-		_, err2 := conn.Do("SET", name, SessionId)
+		_, err1 := conn.Do("SET", SessionId, form.Name)
+		_, err2 := conn.Do("SET", form.Password, SessionId)
 		if err1 != nil || err2 != nil {
 			log.Error("operate redis error")
 		}
-	}else {
-		return "","password error"
+	} else {
+		return "", "password error"
 	}
+	return "success", ""
+}
 
+func Regiester(SessionId string, form RegisterForm) (result string, err string) {
 	return "success", ""
 }
