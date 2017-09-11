@@ -28,7 +28,7 @@ import (
 
 type (
 	OnCompleteFunc func(msg, ack message.Message, err error) error
-	OnPublishFunc  func(msg *message.PublishMessage) error
+	OnPublishFunc func(msg *message.PublishMessage) error
 )
 
 type stat struct {
@@ -123,7 +123,6 @@ type Service struct {
 	rmsgs []*message.PublishMessage
 
 	msgProcess mymqtt.MsgProcess
-
 }
 
 func (this *Service) start() error {
@@ -149,7 +148,6 @@ func (this *Service) start() error {
 				log.Error("Service/onPublish: Error publishing message: %v", err)
 				return err
 			}
-
 			return nil
 		}
 
@@ -191,6 +189,7 @@ func (this *Service) start() error {
 // calls this, and closes the buffers, somehow it causes buffer.go:476 to panid.
 func (this *Service) stop() {
 	defer func() {
+		this.msgProcess.DisConnect(this.sess)
 		// Let's recover from panic
 		if r := recover(); r != nil {
 			log.Error("(%s) Recovering from panic: %v", this.cid(), r)
@@ -258,9 +257,8 @@ func (this *Service) stop() {
 	this.out = nil
 }
 func (this *Service) PublishMsg(msg *message.PublishMessage) error {
-	return this.Publish(msg,nil)
+	return this.Publish(msg, nil)
 }
-
 
 func (this *Service) Publish(msg *message.PublishMessage, onComplete OnCompleteFunc) error {
 	//glog.Debugf("Service/Publish: Publishing %s", msg)

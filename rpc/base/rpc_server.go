@@ -321,7 +321,6 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		var result []byte
 
 		for k, value := range out {
-			log.Info(value.Kind().String())
 			if k == 0 {
 				switch value.Kind() {
 				case reflect.String:

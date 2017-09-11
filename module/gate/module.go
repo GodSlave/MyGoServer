@@ -105,7 +105,7 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 		}
 		return
 	}
-	log.Error(msg.String())
+	log.Info(msg.String())
 	topic := msg.Topic()
 	payload := msg.Payload()
 	var ArgsType []string = make([]string, 2)
@@ -147,4 +147,8 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16) error {
 	publish.SetPayload(body)
 	publish.SetPacketId(packetId)
 	return m.svr.Publish(publish, nil)
+}
+
+func (m *Gate) DisConnect(sess *sessions.Session) {
+	log.Info("%s disconnect ", sess.Id)
 }

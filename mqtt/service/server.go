@@ -347,6 +347,7 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 
 	log.Info("(%s) server/handleConnection: Connection established.", svc.cid())
 
+
 	return svc, nil
 }
 
