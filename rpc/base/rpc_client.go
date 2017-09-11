@@ -25,6 +25,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/mqtt/sessions"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type RPCClient struct {
@@ -88,7 +89,7 @@ func (c *RPCClient) Done() (err error) {
 	return
 }
 
-func (c *RPCClient) CallArgs(_func string, ArgsType []string, args [][]byte) (interface{}, string) {
+func (c *RPCClient) CallArgs(_func string, ArgsType []string, args [][]byte) (interface{}, *base.ErrorCode) {
 	var correlation_id = uuid.Rand().Hex()
 	rpcInfo := &rpcpb.RPCInfo{
 		Fn:       *proto.String(_func),
@@ -111,18 +112,21 @@ func (c *RPCClient) CallArgs(_func string, ArgsType []string, args [][]byte) (in
 	} else if c.redis_client != nil {
 		err = c.redis_client.Call(*callInfo, callback)
 	} else {
-		return nil, fmt.Sprintf("rpc service (%s) connection failed", c.serverId)
+		log.Error("rpc service (%s) connection failed", c.serverId)
+		return nil, base.ErrServerIsDown
 	}
 
 	resultInfo, ok := <-callback
 	if !ok {
-		return nil, "client closed"
+		log.Error("client closed")
+		return nil, base.ErrServerIsDown
 	}
 	result, err := argsutil.Bytes2Args(c.app, resultInfo.ResultType, resultInfo.Result)
 	if err != nil {
-		return nil, err.Error()
+		log.Error(err.Error())
+		return nil, base.ErrInternal
 	}
-	return result, resultInfo.Error
+	return result, base.NewError(resultInfo.ErrorCode, resultInfo.Error)
 }
 
 func (c *RPCClient) CallNRArgs(_func string, ArgsType []string, args [][]byte) (err error) {
@@ -154,14 +158,15 @@ func (c *RPCClient) CallNRArgs(_func string, ArgsType []string, args [][]byte) (
 /**
 消息请求 需要回复
 */
-func (c *RPCClient) Call(_func string, params ...interface{}) (interface{}, string) {
+func (c *RPCClient) Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode) {
 	var ArgsType []string = make([]string, len(params))
 	var args [][]byte = make([][]byte, len(params))
 	for k, param := range params {
 		var err error = nil
 		ArgsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
 		if err != nil {
-			return nil, fmt.Sprintf("args[%d] error %s", k, err.Error())
+			log.Error("args[%d] error %s", k, err.Error())
+			return nil, base.ErrParamParseFail
 		}
 
 		switch v2 := param.(type) { //多选语句switch

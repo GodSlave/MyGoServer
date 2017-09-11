@@ -19,6 +19,7 @@ import (
 	"strings"
 	"github.com/GodSlave/MyGoServer/db"
 	"github.com/go-xorm/xorm"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 func NewApp() module.App {
@@ -48,10 +49,10 @@ type DefaultApp struct {
 	routes        map[string]func(app module.App, Type string, hash string) module.ServerSession
 	defaultRoutes func(app module.App, Type string, hash string) module.ServerSession
 	rpcserializes map[string]module.RPCSerialize
-	Engine  *xorm.Engine
+	Engine        *xorm.Engine
 }
 
-func (app *DefaultApp) Run( mods ...module.Module) error {
+func (app *DefaultApp) Run(mods ...module.Module) error {
 	file, _ := exec.LookPath(os.Args[0])
 	ApplicationPath, _ := filepath.Abs(file)
 	ApplicationDir, _ := filepath.Split(ApplicationPath)
@@ -227,10 +228,10 @@ func (app *DefaultApp) GetSettings() conf.Config {
 	return app.settings
 }
 
-func (app *DefaultApp) RpcInvoke(module module.RPCModule, moduleType string, _func string, params ...interface{}) (result interface{}, err string) {
+func (app *DefaultApp) RpcInvoke(module module.RPCModule, moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
 	server, e := app.GetRouteServers(moduleType, module.GetServerId())
 	if e != nil {
-		err = e.Error()
+		err = base.NewError(404, e.Error())
 		return
 	}
 	return server.Call(_func, params...)
@@ -244,10 +245,10 @@ func (app *DefaultApp) RpcInvokeNR(module module.RPCModule, moduleType string, _
 	return server.CallNR(_func, params...)
 }
 
-func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err string) {
+func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err *base.ErrorCode) {
 	server, e := app.GetRouteServers(moduleType, module.GetServerId())
 	if e != nil {
-		err = e.Error()
+		err = base.NewError(404, e.Error())
 		return
 	}
 	return server.CallArgs(_func, ArgsType, args)
@@ -261,6 +262,6 @@ func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType strin
 	return server.CallNRArgs(_func, ArgsType, args)
 }
 
-func (app *DefaultApp) GetSqlEngine() *xorm.Engine  {
+func (app *DefaultApp) GetSqlEngine() *xorm.Engine {
 	return app.Engine
 }

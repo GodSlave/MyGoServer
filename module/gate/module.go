@@ -9,9 +9,7 @@ import (
 	"github.com/surgemq/message"
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/log"
-	"github.com/GodSlave/MyGoServer/rpc/util"
-	"github.com/GodSlave/MyGoServer/utils"
-	"fmt"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 var RPC_PARAM_SESSION_TYPE = "SESSION"
@@ -28,8 +26,9 @@ type MsgFormat struct {
 }
 
 type resultInfo struct {
-	Error  string      //错误结果 如果为nil表示请求正确
-	Result interface{} //结果
+	Error     string  `json:"error,omitempty"` //错误结果 如果为nil表示请求正确
+	Result    interface{} `json:"result"`      //结果
+	ErrorCode int32    `json:"errorCode"`      //错误代码
 }
 
 var Module = func() module.Module {
@@ -85,14 +84,15 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 		}
 	}()
 
-	toResult := func(Topic []byte, Result interface{}, Error string) (err error) {
+	toResult := func(Topic []byte, Result interface{}, error *base.ErrorCode, packetId uint16) (err error) {
 		r := &resultInfo{
-			Error:  Error,
-			Result: Result,
+			Error:     error.Desc,
+			Result:    Result,
+			ErrorCode: error.ErrorCode,
 		}
 		b, err := json.Marshal(r)
 		if err == nil {
-			m.WriteMsg(Topic, b)
+			m.WriteMsg(Topic, b, packetId)
 		} else {
 			r = &resultInfo{
 				Error:  err.Error(),
@@ -101,56 +101,30 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 			log.Error(err.Error())
 
 			br, _ := json.Marshal(r)
-			m.WriteMsg(Topic, br)
+			m.WriteMsg(Topic, br, packetId)
 		}
 		return
 	}
-
+	log.Error(msg.String())
 	topic := msg.Topic()
 	payload := msg.Payload()
 	var ArgsType []string = make([]string, 2)
 	var args [][]byte = make([][]byte, 2)
 	var msgContent MsgFormat
+	packetId := msg.PacketId()
 	err := json.Unmarshal(payload, &msgContent)
 	if err == nil {
-		switch msgContent.Params.(type) {
-		case map[string]interface{}:
-			ArgsType[1] = argsutil.MAP
-			args[1], _ = utils.MapToBytes(msgContent.Params.(map[string]interface{}))
-			break
-		case int32:
-			ArgsType[1] = argsutil.INT
-			args[1] = utils.Int32ToBytes(msgContent.Params.(int32))
-			break
-		case int64:
-			ArgsType[1] = argsutil.LONG
-			args[1] = utils.Int64ToBytes(msgContent.Params.(int64))
-			break
-		case string:
-			ArgsType[1] = argsutil.STRING
-			args[1] = []byte(msgContent.Params.(string))
-			break
-		case bool:
-			ArgsType[1] = argsutil.BOOL
-			args[1] = utils.BoolToBytes(msgContent.Params.(bool))
-			break
-		case float32:
-			ArgsType[1] = argsutil.FLOAT
-			args[1] = utils.Float32ToBytes(msgContent.Params.(float32))
-			break
-		case float64:
-			ArgsType[1] = argsutil.DOUBLE
-			args[1] = utils.Float64ToBytes(msgContent.Params.(float64))
-			break
-		default:
-			log.Error("un know param type")
-			break
+		arg1, err := json.Marshal(msgContent.Params)
+		if err == nil {
+			args[1] = arg1
+		} else {
+			log.Error("msg param format error %s", err.Error())
+			toResult(topic, nil, base.ErrParamParseFail, packetId)
 		}
-
 		serverSession, err := m.App.GetRouteServers(msgContent.Module, "")
-
 		if err != nil {
-			toResult(topic, nil, fmt.Sprintf("Service(type:%s) not found", msgContent.Module))
+			log.Error("Service(type:%s) not found", msgContent.Module)
+			toResult(topic, nil, base.ErrNotFound, packetId)
 			return false
 		}
 		ArgsType[0] = RPC_PARAM_SESSION_TYPE
@@ -158,19 +132,19 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 		b := []byte(sess.Id)
 		args[0] = b
 		result, e := serverSession.CallArgs(msgContent.Func, ArgsType, args)
-		toResult(topic, result, e)
+		toResult(topic, result, e, packetId)
 	} else {
 		log.Error("msg format error %s", err.Error())
-		toResult(topic, nil, "msg format error")
+		toResult(topic, nil, base.ErrParamParseFail, packetId)
 		return false
 	}
-
 	return true
 }
 
-func (m *Gate) WriteMsg(topic []byte, body []byte) error {
+func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16) error {
 	publish := message.NewPublishMessage()
 	publish.SetTopic(topic)
 	publish.SetPayload(body)
+	publish.SetPacketId(packetId)
 	return m.svr.Publish(publish, nil)
 }

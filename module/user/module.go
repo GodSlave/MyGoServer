@@ -6,18 +6,24 @@ import (
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/utils"
-	"github.com/GodSlave/MyGoServer/log"
+	"github.com/go-xorm/xorm"
+	"time"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type ModuleUser struct {
 	basemodule.BaseModule
 	redisPool *redis.Pool
+	sqlEngine *xorm.Engine
+	app       module.App
 }
 
 type BaseUser struct {
-	Name     string
-	password string
-	Id       string
+	Name     string `xorm:"unique index" json:"-"`
+	Phone    string `xorm:"unique index"`
+	Password string
+	Id       string    `xorm:"pk"`
+	CreateAt time.Time `xorm:"created"`
 }
 
 var Module = func() module.Module {
@@ -30,8 +36,12 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.BaseModule.OnInit(m, app, settings)
 	url := settings.Settings["redis"].(string)
 	m.redisPool = utils.GetRedisFactory().GetPool(url)
-
+	m.sqlEngine = app.GetSqlEngine()
 	m.GetServer().RegisterGO("Login", m.Login)
+	m.app = app
+
+	var user = &BaseUser{}
+	m.sqlEngine.Sync(user)
 }
 
 func (m *ModuleUser) GetType() string {
@@ -65,20 +75,19 @@ type RegisterForm struct {
 	VerifyCode string `json:"verifyCode"`
 }
 
-func (m *ModuleUser) Login(SessionId string, form *LoginForm) (result string, err string) {
-	if form.Name == form.Password {
-		conn := m.redisPool.Get()
-		_, err1 := conn.Do("SET", SessionId, form.Name)
-		_, err2 := conn.Do("SET", form.Password, SessionId)
-		if err1 != nil || err2 != nil {
-			log.Error("operate redis error")
-		}
+func (m *ModuleUser) Login(SessionId string, form *LoginForm) (result string, err *base.ErrorCode) {
+	user := new(BaseUser)
+	has, err1 := m.sqlEngine.Where("name=?", form.Name).Get(user)
+	if err1 == nil && has {
+
 	} else {
-		return "", "password error"
+		return "", base.ErrLoginFail
 	}
-	return "success", ""
+
+	return "success", base.ErrNil
 }
 
 func Regiester(SessionId string, form RegisterForm) (result string, err string) {
+
 	return "success", ""
 }

@@ -6,6 +6,8 @@ import (
 	app2 "github.com/GodSlave/MyGoServer/app"
 	"github.com/GodSlave/MyGoServer/module/gate"
 	"github.com/GodSlave/MyGoServer/module/user"
+	"github.com/GodSlave/MyGoServer/utils/uuid"
+	"fmt"
 )
 
 func TestMqtt(t *testing.T) {
@@ -23,4 +25,10 @@ func TestMqtt(t *testing.T) {
 func TestRun(t *testing.T) {
 	app := app2.NewApp()
 	app.Run(gate.Module(), user.Module())
+}
+
+func TestUUID(t *testing.T) {
+	fmt.Print(uuid.Rand().Hex())
+	fmt.Print(uuid.Rand().Hex())
+	fmt.Print(uuid.Rand().Hex())
 }

@@ -27,8 +27,8 @@ var (
 	LONG="long"	//long64
 	FLOAT="float"	//float32
 	DOUBLE="double"	//float64
-	BYTES="bytes"	//[]byte
 	STRING="string" //string
+	BYTES="bytes"	//[]byte
 	MAP="map"	//map[string]interface{}
 	MAPSTR="mapstr"	//map[string]string{}
 )

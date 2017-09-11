@@ -14,6 +14,7 @@ message RPCInfo {
 message ResultInfo {
     string Cid = 1;
     string Error = 2;
+    int32 ErrorCode = 3;
     string ResultType = 4;
     bytes Result = 5;
 }

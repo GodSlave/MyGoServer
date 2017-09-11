@@ -20,10 +20,12 @@ import (
 	"github.com/GodSlave/MyGoServer/log"
 	"github.com/GodSlave/MyGoServer/module"
 )
+
 func NewModuleManager() (m *ModuleManager) {
 	m = new(ModuleManager)
 	return
 }
+
 type ModuleManager struct {
 	app     module.App
 	mods    []*DefaultModule
@@ -119,7 +121,7 @@ func (mer *ModuleManager) ReportStatistics(args interface{}) {
 				if len(servers) == 1 {
 					b, _ := value.GetStatistical()
 					_, err := servers[0].Call("ReportForm", value.GetType(), m.settings.ProcessID, m.settings.Id, value.Version(), b, value.GetExecuting())
-					if err != "" {
+					if err != nil {
 						log.Warning("Report To Master error :", err)
 					}
 				}
@@ -129,4 +131,3 @@ func (mer *ModuleManager) ReportStatistics(args interface{}) {
 		timer.SetTimer(3, mer.ReportStatistics, nil)
 	}
 }
-

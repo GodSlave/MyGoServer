@@ -26,7 +26,6 @@ import (
 
 var (
 	LenStackBuf = 1024
-
 	Conf        = Config{}
 )
 
@@ -45,6 +44,7 @@ type Config struct {
 	Master Master
 	Debug  bool
 	DB  DB
+	PrivateKey string
 }
 
 type DB struct {

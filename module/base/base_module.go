@@ -21,6 +21,7 @@ import (
 	"time"
 	"github.com/GodSlave/MyGoServer/rpc/pb"
 	"github.com/GodSlave/MyGoServer/module"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type StatisticalMethod struct {
@@ -100,10 +101,10 @@ func (m *BaseModule) GetRouteServers(moduleType string, hash string) (s module.S
 	return m.App.GetRouteServers(moduleType, hash)
 }
 
-func (m *BaseModule) RpcInvoke(moduleType string, _func string, params ...interface{}) (result interface{}, err string) {
+func (m *BaseModule) RpcInvoke(moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
 	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
 	if e != nil {
-		err = e.Error()
+		err = base.NewError(404, e.Error())
 		return
 	}
 	return server.Call(_func, params...)
@@ -117,10 +118,10 @@ func (m *BaseModule) RpcInvokeNR(moduleType string, _func string, params ...inte
 	return server.CallNR(_func, params...)
 }
 
-func (m *BaseModule) RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err string) {
+func (m *BaseModule) RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err *base.ErrorCode) {
 	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
 	if e != nil {
-		err = e.Error()
+		err = base.NewError(404, e.Error())
 		return
 	}
 	return server.CallArgs(_func, ArgsType, args)

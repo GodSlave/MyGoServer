@@ -17,15 +17,16 @@ import (
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/go-xorm/xorm"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type ServerSession interface {
 	GetId() string
 	GetType() string
 	GetRpc() mqrpc.RPCClient
-	Call(_func string, params ...interface{}) (interface{}, string)
+	Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode)
 	CallNR(_func string, params ...interface{}) (err error)
-	CallArgs(_func string, ArgsType []string, args [][]byte) (interface{}, string)
+	CallArgs(_func string, ArgsType []string, args [][]byte) (interface{}, *base.ErrorCode)
 	CallNRArgs(_func string, ArgsType []string, args [][]byte) (err error)
 }
 type App interface {
@@ -47,7 +48,7 @@ type App interface {
 	GetRouteServers(filter string, hash string) (ServerSession, error) //获取经过筛选过的服务
 	GetServersByType(Type string) []ServerSession
 	GetSettings() conf.Config //获取配置信息
-	RpcInvoke(module RPCModule, moduleType string, _func string, params ...interface{}) (interface{}, string)
+	RpcInvoke(module RPCModule, moduleType string, _func string, params ...interface{}) (interface{}, *base.ErrorCode)
 	RpcInvokeNR(module RPCModule, moduleType string, _func string, params ...interface{}) error
 
 	/**
@@ -73,9 +74,9 @@ type Module interface {
 type RPCModule interface {
 	Module
 	GetServerId() string //模块类型
-	RpcInvoke(moduleType string, _func string, params ...interface{}) (interface{}, string)
+	RpcInvoke(moduleType string, _func string, params ...interface{}) (interface{}, *base.ErrorCode)
 	RpcInvokeNR(moduleType string, _func string, params ...interface{}) error
-	RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (interface{}, string)
+	RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (interface{}, *base.ErrorCode)
 	RpcInvokeNRArgs(moduleType string, _func string, ArgsType []string, args [][]byte) error
 	GetModuleSettings() (settings *conf.ModuleSettings)
 	/**

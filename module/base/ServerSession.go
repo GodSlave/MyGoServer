@@ -16,6 +16,7 @@ package basemodule
 import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/GodSlave/MyGoServer/module"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 func NewServerSession(Id string ,Stype string,Rpc mqrpc.RPCClient) (module.ServerSession) {
@@ -44,7 +45,7 @@ func (c *serverSession)GetRpc()mqrpc.RPCClient{
 /**
 消息请求 需要回复
 */
-func (c *serverSession) Call(_func string, params ...interface{}) (interface{}, string) {
+func (c *serverSession) Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode) {
 	return c.Rpc.Call(_func, params...)
 }
 
@@ -58,7 +59,7 @@ func (c *serverSession) CallNR(_func string, params ...interface{}) (err error) 
 /**
 消息请求 需要回复
 */
-func (c *serverSession) CallArgs(_func string, ArgsType []string,args [][]byte) (interface{}, string) {
+func (c *serverSession) CallArgs(_func string, ArgsType []string,args [][]byte) (interface{}, *base.ErrorCode) {
 	return c.Rpc.CallArgs(_func, ArgsType,args)
 }
 

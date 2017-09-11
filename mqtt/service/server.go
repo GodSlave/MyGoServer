@@ -224,7 +224,10 @@ func (this *Server) Close() error {
 
 	// We then close the net.Listener, which will force Accept() to return if it's
 	// blocked waiting for new connections.
-	this.ln.Close()
+	if this.ln !=nil{
+		this.ln.Close()
+	}
+
 
 	for _, svc := range this.svcs {
 		log.Info("Stopping Service %d", svc.id)

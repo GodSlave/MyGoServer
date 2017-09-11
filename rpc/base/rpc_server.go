@@ -27,6 +27,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/opentracing/opentracing-go"
 	"encoding/json"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type RPCServer struct {
@@ -210,12 +211,12 @@ func (s *RPCServer) on_call_handle(calls <-chan mqrpc.CallInfo, callbacks chan<-
 
 //---------------------------------if _func is not a function or para num and type not match,it will cause panic
 func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.CallInfo) {
-	_errorCallback := func(Cid string, Error string) {
-		resultInfo := rpcpb.NewResultInfo(Cid, Error, argsutil.NULL, nil)
+	_errorCallback := func(Cid string, errorCode *base.ErrorCode) {
+		resultInfo := rpcpb.NewResultInfo(Cid, errorCode.Desc, errorCode.ErrorCode, argsutil.NULL, nil)
 		callInfo.Result = *resultInfo
 		callbacks <- callInfo
 		if s.listener != nil {
-			s.listener.OnError(callInfo.RpcInfo.Fn, &callInfo, fmt.Errorf(Error))
+			s.listener.OnError(callInfo.RpcInfo.Fn, &callInfo, fmt.Errorf(errorCode.Error()))
 		}
 	}
 	defer func() {
@@ -228,13 +229,14 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 			case error:
 				rn = r.(error).Error()
 			}
-			_errorCallback(callInfo.RpcInfo.Cid, rn)
+			error := base.NewError(500, rn)
+			_errorCallback(callInfo.RpcInfo.Cid, error)
 		}
 	}()
 
 	functionInfo, ok := s.functions[callInfo.RpcInfo.Fn]
 	if !ok {
-		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn))
+		_errorCallback(callInfo.RpcInfo.Cid, base.NewError(404, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn)))
 		return
 	}
 	_func := functionInfo.Function
@@ -268,7 +270,7 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				l := runtime.Stack(buf, false)
 				errstr := string(buf[:l])
 				log.Error("%s rpc func(%s) error %s\n ----Stack----\n%s", s.module.GetType(), callInfo.RpcInfo.Fn, rn, errstr)
-				_errorCallback(callInfo.RpcInfo.Cid, rn)
+				_errorCallback(callInfo.RpcInfo.Cid, base.NewError(500, rn))
 			}
 
 			if span != nil {
@@ -309,47 +311,59 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		if s.listener != nil {
 			errs := s.listener.BeforeHandle(callInfo.RpcInfo.Fn, session, &callInfo)
 			if errs != nil {
-				_errorCallback(callInfo.RpcInfo.Cid, errs.Error())
+				_errorCallback(callInfo.RpcInfo.Cid, base.ErrInternal)
 				return
 			}
 		}
 
 		out := f.Call(in)
-		var rs []interface{}
-		if len(out) != 2 {
+		errorCode := base.ErrNil
+		var result []byte
+
+		for k, value := range out {
+			log.Info(value.Kind().String())
+			if k == 0 {
+				switch value.Kind() {
+				case reflect.String:
+					result = []byte(value.Interface().(string))
+				default:
+					result, _ = json.Marshal(value.Interface())
+				}
+			}
+
+			if k == 1 {
+				switch value.Kind() {
+				case reflect.String:
+					errorInfo := value.String()
+					if errorInfo != "" {
+						errorCode = base.NewError(500, errorInfo)
+					}
+				default:
+					errorCode1, err := value.Interface().(*base.ErrorCode)
+					if err {
+						errorCode = errorCode1
+					}
+				}
+			}
+		}
+
+		if len(out) < 2 {
 			if span != nil {
 				span.LogEventWithPayload("Error", "The number of prepare is not adapted.")
 			}
-			_errorCallback(callInfo.RpcInfo.Cid, "The number of prepare is not adapted.")
+			_errorCallback(callInfo.RpcInfo.Cid, base.ErrInternal)
 			return
 		}
-		if len(out) > 0 { //prepare out paras
-			rs = make([]interface{}, len(out), len(out))
-			for i, v := range out {
-				rs[i] = v.Interface()
-			}
-		}
-		argsType, args, err := argsutil.ArgsTypeAnd2Bytes(s.app, rs[0])
-		if err != nil {
-			if span != nil {
-				span.LogEventWithPayload("Error", err.Error())
-			}
-			_errorCallback(callInfo.RpcInfo.Cid, err.Error())
-			return
-		}
+
 		resultInfo := rpcpb.NewResultInfo(
 			callInfo.RpcInfo.Cid,
-			rs[1].(string),
-			argsType,
-			args,
+			errorCode.Desc,
+			errorCode.ErrorCode,
+			argsutil.BYTES,
+			result,
 		)
 		callInfo.Result = *resultInfo
 		callbacks <- callInfo
-
-		if span != nil {
-			span.LogEventWithPayload("Result.Type", argsType)
-			span.LogEventWithPayload("Result", string(args))
-		}
 
 		if s.listener != nil {
 			s.listener.OnComplete(callInfo.RpcInfo.Fn, &callInfo, resultInfo, time.Now().UnixNano()-exec_time)

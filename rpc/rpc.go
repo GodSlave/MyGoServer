@@ -16,6 +16,7 @@ package mqrpc
 import (
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/rpc/pb"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 
@@ -68,9 +69,9 @@ type RPCClient interface {
 	NewRedisClient(info *conf.Redis) (err error)
 	NewLocalClient(server RPCServer) (err error)
 	Done() (err error)
-	CallArgs(_func string, ArgsType []string,args [][]byte ) (interface{}, string)
+	CallArgs(_func string, ArgsType []string,args [][]byte ) (interface{}, *base.ErrorCode)
 	CallNRArgs(_func string, ArgsType []string,args [][]byte ) (err error)
-	Call(_func string, params ...interface{}) (interface{}, string)
+	Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode)
 	CallNR(_func string, params ...interface{}) (err error)
 }
 
