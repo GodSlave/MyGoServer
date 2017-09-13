@@ -1,0 +1,37 @@
+syntax = "proto3";
+package user;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+
+//DB model
+message BaseUser {
+    // @inject_tag: xorm:"unique index notnull"
+    string name = 1  [(gogoproto.jsontag) = "name,omitempty"];
+    //@inject_tag: xorm:"unique index"
+    string phone = 2;
+    //@inject_tag: json:"-"
+
+    string password = 3;
+    //@inject_tag: xorm:"unique index notnull"
+    string userID = 4;
+    //@inject_tag:  json:"-"
+    int64 id = 5;
+    //@inject_tag:  json:"-"
+    int64 creatTime = 6;
+}
+
+message LoginForm {
+    string name = 1;
+    string password = 2;
+}
+
+message RegisterForm {
+    string name = 1;
+    string password = 2;
+    string verifyCode = 3;
+}

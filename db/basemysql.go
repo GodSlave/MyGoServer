@@ -47,7 +47,6 @@ func (sql *BaseSql) migrate(oldversion int32) {
 	}
 
 	if oldversion == 1 {
-		//TODO  do migrate
 		sql.Engine.SQL("update d_b_version set version = 2 ;")
 	}
 

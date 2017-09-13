@@ -9,6 +9,9 @@ import (
 	"github.com/go-xorm/xorm"
 	"time"
 	"github.com/GodSlave/MyGoServer/base"
+	"crypto/md5"
+	"encoding/hex"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 type ModuleUser struct {
@@ -19,9 +22,9 @@ type ModuleUser struct {
 }
 
 type BaseUser struct {
-	Name     string `xorm:"unique index" json:"-"`
+	Name     string `xorm:"unique index"`
 	Phone    string `xorm:"unique index"`
-	Password string
+	Password string    `json:"-"`
 	Id       string    `xorm:"pk"`
 	CreateAt time.Time `xorm:"created"`
 }
@@ -64,30 +67,48 @@ func (m *ModuleUser) OnDestroy() {
 	m.GetServer().OnDestroy()
 }
 
-type LoginForm struct {
-	Name     string    `json:"name"`
-	Password string `json:"password"`
-}
 
-type RegisterForm struct {
-	Name       string `json:"name"`
-	Password   string `json:"password"`
-	VerifyCode string `json:"verifyCode"`
-}
 
 func (m *ModuleUser) Login(SessionId string, form *LoginForm) (result string, err *base.ErrorCode) {
 	user := new(BaseUser)
 	has, err1 := m.sqlEngine.Where("name=?", form.Name).Get(user)
 	if err1 == nil && has {
+		if user.Password == hex.Dump(md5.Sum([]byte(user.Password + m.GetApp().GetSettings().PrivateKey))[:]) {
+			conn := m.redisPool.Get()
+			_, err1 := conn.Do("SET", SessionId, user.Id)
+			if err1 != nil {
+				log.Error("operate redis error")
+				return "", base.ErrInternal
+			}
+			return "success", base.ErrNil
+		}
+	}
+	return "", base.ErrLoginFail
+}
 
-	} else {
-		return "", base.ErrLoginFail
+func (m *ModuleUser) Regiester(SessionId string, form RegisterForm) (result string, err *base.ErrorCode) {
+
+	if len(form.Name) < 8 || len(form.Password) < 8 {
+		return "", base.ErrParamNotAllow
+	}
+	user := &BaseUser{
+		Name:     form.Name,
+		Password: form.Password,
 	}
 
 	return "success", base.ErrNil
 }
 
-func Regiester(SessionId string, form RegisterForm) (result string, err string) {
+func (m *ModuleUser) GetVerifyCode(SessionId string, form RegisterForm) (result string, err *base.ErrorCode) {
 
-	return "success", ""
+	return "success", base.ErrNil
+}
+
+func (m *ModuleUser) GetFullSelfInfo(SessionId string, form RegisterForm) (result string, err *base.ErrorCode) {
+
+	return "success", base.ErrNil
+}
+
+func (m *ModuleUser) UpdatePassword(SessionId string, form RegisterForm) (result string, err *base.ErrorCode) {
+	return "success", base.ErrNil
 }
