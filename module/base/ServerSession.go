@@ -19,11 +19,12 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 )
 
-func NewServerSession(Id string ,Stype string,Rpc mqrpc.RPCClient) (module.ServerSession) {
+func NewServerSession(Id string, Stype string, Btype byte, Rpc mqrpc.RPCClient) (module.ServerSession) {
 	session := &serverSession{
 		Id:    Id,
 		Stype: Stype,
 		Rpc:   Rpc,
+		Btype: Btype,
 	}
 	return session
 }
@@ -31,41 +32,38 @@ func NewServerSession(Id string ,Stype string,Rpc mqrpc.RPCClient) (module.Serve
 type serverSession struct {
 	Id    string
 	Stype string
+	Btype byte
 	Rpc   mqrpc.RPCClient
 }
-func (c *serverSession)GetId()string{
+
+func (c *serverSession) GetId() string {
 	return c.Id
 }
-func (c *serverSession)GetType()string{
+func (c *serverSession) GetType() string {
 	return c.Stype
 }
-func (c *serverSession)GetRpc()mqrpc.RPCClient{
+func (c *serverSession) GetRpc() mqrpc.RPCClient {
 	return c.Rpc
 }
-/**
-消息请求 需要回复
-*/
-func (c *serverSession) Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode) {
-	return c.Rpc.Call(_func, params...)
+
+func (c *serverSession) GetByteType() byte {
+	return c.Btype
 }
 
 /**
 消息请求 需要回复
 */
-func (c *serverSession) CallNR(_func string, params ...interface{}) (err error) {
-	return c.Rpc.CallNR(_func, params...)
+func (c *serverSession) CallArgs(_func string, sessionId string, args []byte) ([]byte, *base.ErrorCode) {
+	return c.Rpc.CallArgs(_func, sessionId, args)
+}
+
+func (c *serverSession) CallByteArgs(_func byte, sessionId string, args []byte) ([]byte, *base.ErrorCode) {
+	return c.Rpc.CallByteArgs(_func, sessionId, args)
 }
 
 /**
-消息请求 需要回复
+消息请求 bu需要回复
 */
-func (c *serverSession) CallArgs(_func string, ArgsType []string,args [][]byte) (interface{}, *base.ErrorCode) {
-	return c.Rpc.CallArgs(_func, ArgsType,args)
-}
-
-/**
-消息请求 需要回复
-*/
-func (c *serverSession) CallNRArgs(_func string, ArgsType []string,args [][]byte) (err error) {
-	return c.Rpc.CallNRArgs(_func, ArgsType,args)
+func (c *serverSession) CallNRArgs(_func string, sessionId string, args []byte) (err error) {
+	return c.Rpc.CallNRArgs(_func, sessionId, args)
 }

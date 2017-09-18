@@ -112,6 +112,8 @@ type Server struct {
 	// A indicator on whether this server has already checked configuration
 	configOnce sync.Once
 
+	Services map[string]*Service
+
 	subs []interface{}
 	qoss []byte
 }
@@ -200,7 +202,7 @@ func (this *Server) Publish(msg *message.PublishMessage, onComplete OnCompleteFu
 
 	msg.SetRetain(false)
 
-	//glog.Debugf("(server) Publishing to topic %q and %d subscribers", string(msg.Topic()), len(this.subs))
+	log.Info("(server) Publishing to topic %q and %d subscribers", string(msg.Topic()), len(this.subs))
 	for _, s := range this.subs {
 		if s != nil {
 			fn, ok := s.(*OnPublishFunc)
@@ -215,6 +217,21 @@ func (this *Server) Publish(msg *message.PublishMessage, onComplete OnCompleteFu
 	return nil
 }
 
+func (this *Server) PublishToClient(msg *message.PublishMessage, sessionID string, onComplete OnCompleteFunc) error {
+	if err := this.checkConfiguration(); err != nil {
+		return err
+	}
+
+	service, _err := this.Services[sessionID]
+	if !_err {
+		log.Info("ssssionID not found %s", sessionID)
+		return nil
+	}
+	msg.SetRetain(false)
+	service.Publish(msg, onComplete)
+	return nil
+}
+
 // Close terminates the server by shutting down all the client connections and closing
 // the listener. It will, as best it can, clean up after itself.
 func (this *Server) Close() error {
@@ -224,10 +241,9 @@ func (this *Server) Close() error {
 
 	// We then close the net.Listener, which will force Accept() to return if it's
 	// blocked waiting for new connections.
-	if this.ln !=nil{
+	if this.ln != nil {
 		this.ln.Close()
 	}
-
 
 	for _, svc := range this.svcs {
 		log.Info("Stopping Service %d", svc.id)
@@ -303,6 +319,20 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		return nil, err
 	}
 
+	if len(req.ClientId()) < 32 || len(req.ClientId()) > 64 {
+		resp.SetReturnCode(message.ErrIdentifierRejected)
+		resp.SetSessionPresent(false)
+		writeMessage(conn, resp)
+		return nil, nil
+	}
+
+	if _, err := this.sessMgr.Get(string(req.ClientId())); err == nil {
+		resp.SetReturnCode(message.ErrNotAuthorized)
+		resp.SetSessionPresent(false)
+		writeMessage(conn, resp)
+		return nil, nil
+	}
+
 	if req.KeepAlive() == 0 {
 		req.SetKeepAlive(minKeepAlive)
 	}
@@ -320,9 +350,10 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		sessMgr:    this.sessMgr,
 		topicsMgr:  this.topicsMgr,
 		msgProcess: this.MsgAgent,
+		Services:   this.Services,
 	}
-
 	err = this.getSession(svc, req, resp)
+	this.Services[string(req.ClientId())] = svc
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +377,6 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 	//this.mu.Unlock()
 
 	log.Info("(%s) server/handleConnection: Connection established.", svc.cid())
-
 
 	return svc, nil
 }

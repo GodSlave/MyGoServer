@@ -29,7 +29,10 @@ var seeded bool = false
 
 // uuidRegex matches the UUID string
 var uuidRegex *regexp.Regexp = regexp.MustCompile(`^\{?([a-fA-F0-9]{8})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{12})\}?$`)
-
+var safeBytes = []byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+	'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '_'}
+var numbers = []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 // UUID type.
 type UUID [16]byte
 
@@ -46,7 +49,7 @@ func (this UUID) Hex() string {
 // Rand generates a new version 4 UUID.
 func Rand() UUID {
 	var x [16]byte
-	randBytes(x[:])
+	RandBytes(x[:])
 	x[6] = (x[6] & 0x0F) | 0x40
 	x[8] = (x[8] & 0x3F) | 0x80
 	return x
@@ -92,13 +95,14 @@ func MustFromStr(s string) UUID {
 }
 
 // randBytes uses crypto random to get random numbers. If fails then it uses math random.
-func randBytes(x []byte) {
+func RandBytes(x []byte) {
 
 	length := len(x)
 	n, err := crand.Read(x)
 
 	if n != length || err != nil {
 		if !seeded {
+			seeded = true
 			mrand.Seed(time.Now().UnixNano())
 		}
 
@@ -107,4 +111,30 @@ func randBytes(x []byte) {
 			x[length] = byte(mrand.Int31n(256))
 		}
 	}
+}
+
+func SafeString(lenth uint) (string) {
+	x := make([]byte, lenth)
+	if !seeded {
+		seeded = true
+		mrand.Seed(time.Now().UnixNano())
+	}
+	for lenth > 0 {
+		lenth --
+		x[lenth] = safeBytes[mrand.Intn(len(safeBytes))]
+	}
+	return string(x)
+}
+
+func RandNumbers(lenth uint) (string) {
+	x := make([]byte, lenth)
+	if !seeded {
+		seeded = true
+		mrand.Seed(time.Now().UnixNano())
+	}
+	for lenth > 0 {
+		lenth --
+		x[lenth] = numbers[mrand.Intn(len(numbers))]
+	}
+	return string(x)
 }

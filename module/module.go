@@ -23,11 +23,11 @@ import (
 type ServerSession interface {
 	GetId() string
 	GetType() string
+	GetByteType() byte
 	GetRpc() mqrpc.RPCClient
-	Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode)
-	CallNR(_func string, params ...interface{}) (err error)
-	CallArgs(_func string, ArgsType []string, args [][]byte) (interface{}, *base.ErrorCode)
-	CallNRArgs(_func string, ArgsType []string, args [][]byte) (err error)
+	CallArgs(_func string, sessionId string, args []byte) ([]byte, *base.ErrorCode)
+	CallByteArgs(_func byte, sessionId string, args []byte) ([]byte, *base.ErrorCode)
+	CallNRArgs(_func string, sessionId string, args []byte) (err error)
 }
 type App interface {
 	Run(mods ...Module) error
@@ -45,12 +45,13 @@ type App interface {
 	filter		 调用者服务类型    moduleType|moduleType@moduleID
 	Type	   	想要调用的服务类型
 	*/
-	GetRouteServers(filter string, hash string) (ServerSession, error) //获取经过筛选过的服务
+	GetRouteServers(filter string, hash string) (ServerSession, error)   //获取经过筛选过的服务
+	GetByteRouteServers(filter byte, hash string) (ServerSession, error) //获取经过筛选过的服务
 	GetServersByType(Type string) []ServerSession
+	GetServersByByteType(Type byte) []ServerSession
 	GetSettings() conf.Config //获取配置信息
-	RpcInvoke(module RPCModule, moduleType string, _func string, params ...interface{}) (interface{}, *base.ErrorCode)
-	RpcInvokeNR(module RPCModule, moduleType string, _func string, params ...interface{}) error
-
+	RpcInvokeNRArgs(module RPCModule, moduleType string, _func string, sessionId string, args []byte) (err error)
+	RpcInvokeArgs(module RPCModule, moduleType string, _func string, sessionId string, args []byte) (result interface{}, err *base.ErrorCode)
 	/**
 	添加一个 自定义参数序列化接口
 	gate,system 关键词一被占用请使用其他名称
@@ -74,10 +75,10 @@ type Module interface {
 type RPCModule interface {
 	Module
 	GetServerId() string //模块类型
-	RpcInvoke(moduleType string, _func string, params ...interface{}) (interface{}, *base.ErrorCode)
-	RpcInvokeNR(moduleType string, _func string, params ...interface{}) error
-	RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (interface{}, *base.ErrorCode)
-	RpcInvokeNRArgs(moduleType string, _func string, ArgsType []string, args [][]byte) error
+	//RpcInvoke(moduleType string, _func string, params ...interface{}) (interface{}, *base.ErrorCode)
+	//RpcInvokeNR(moduleType string, _func string, params ...interface{}) error
+	RpcInvokeArgs(moduleType string, _func string, sessionID string, args []byte) (interface{}, *base.ErrorCode)
+	RpcInvokeNRArgs(moduleType string, _func string, sessionID string, args []byte) error
 	GetModuleSettings() (settings *conf.ModuleSettings)
 	/**
 	filter		 调用者服务类型    moduleType|moduleType@moduleID

@@ -22,6 +22,8 @@ import (
 	"github.com/GodSlave/MyGoServer/log"
 	"github.com/surgemq/message"
 	"github.com/GodSlave/MyGoServer/mqtt/sessions"
+	"github.com/GodSlave/MyGoServer/utils/uuid"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 var (
@@ -33,7 +35,7 @@ func (this *Service) processor() {
 	defer func() {
 		// Let's recover from panic
 		if r := recover(); r != nil {
-			//log.Error("(%s) Recovering from panic: %v", this.cid(), r)
+			log.Error("(%s) Recovering from panic: %v", this.cid(), r)
 		}
 
 		this.wgStopped.Done()
@@ -297,7 +299,7 @@ func (this *Service) processPublish(msg *message.PublishMessage) error {
 }
 
 // For SUBSCRIBE message, we should add subscriber, then send back SUBACK
-func (this *Service) processSubscribe(msg *message.SubscribeMessage) error {
+func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error) {
 	resp := message.NewSubackMessage()
 	resp.SetPacketId(msg.PacketId())
 
@@ -310,14 +312,47 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) error {
 	this.rmsgs = this.rmsgs[0:0]
 
 	for i, t := range topics {
+
+		if t[0] == 'i' || t[0] == 'f' {
+			//TODO verify user
+			if len(this.sess.AesKey) == 0 {
+				log.Info("subscribe with error topic id %s", t)
+				retcodes = append(retcodes, 0x80)
+			} else {
+				retcodes = append(retcodes, message.QosAtLeastOnce)
+			}
+		} else if t[0] == 's' {
+
+			defer func() {
+				if err == nil {
+					pubMessage := message.NewPublishMessage()
+					pubMessage.SetTopic(t)
+					randBytes := make([]byte, 32)
+					uuid.RandBytes(randBytes)
+					pubMessage.SetPayload(randBytes)
+					err := this.PublishMsg(pubMessage)
+					if err == nil {
+						md5result := base.GetMd5T([]byte(this.sess.Id), randBytes)
+						this.sess.AesKey = md5result[:]
+						log.Info("AesKey is %v", md5result)
+					} else {
+						log.Error(err.Error())
+					}
+
+				} else {
+					log.Error(" send random code error %s", err.Error())
+				}
+
+			}()
+
+		}
+
 		rqos, err := this.topicsMgr.Subscribe(t, qos[i], &this.onpub)
 		if err != nil {
 			return err
 		}
 		this.sess.AddTopic(string(t), qos[i])
-
 		retcodes = append(retcodes, rqos)
-
 		// yeah I am not checking errors here. If there's an error we don't want the
 		// subscription to stop, just let it go.
 		this.topicsMgr.Retained(t, &this.rmsgs)
@@ -377,8 +412,10 @@ func (this *Service) onPublish(msg *message.PublishMessage) error {
 	msg.SetRetain(false)
 	topic := msg.Topic()
 	log.Info("a message come %s %s", msg.Topic(), msg.Payload())
-	if topic[0] == 'i' && this.msgProcess != nil {
-		this.msgProcess.Process(msg, this.sess)
+	if topic[0] == 'i' || topic[0] == 'f' {
+		if this.msgProcess != nil {
+			this.msgProcess.Process(msg, this.sess)
+		}
 	} else {
 		//log.Debug("(%s) Publishing to topic %q and %d subscribers", this.cid(), string(msg.Topic()), len(this.subs))
 		for _, s := range this.subs {

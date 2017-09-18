@@ -19,7 +19,6 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 )
 
-
 type FunctionInfo struct {
 	Function  interface{}
 	Goroutine bool
@@ -30,7 +29,7 @@ type MQServer interface {
 }
 
 type CallInfo struct {
-	RpcInfo	rpcpb.RPCInfo
+	RpcInfo rpcpb.RPCInfo
 	Result  rpcpb.ResultInfo
 	Props   map[string]interface{}
 	Agent   MQServer //代理者  AMQPServer / LocalServer 都继承 Callback(callinfo CallInfo)(error) 方法
@@ -41,8 +40,8 @@ type RPCListener interface {
 	@session  可能为nil
 	return error  当error不为nil时将直接返回改错误信息而不会再执行后续调用
 	 */
-	BeforeHandle(fn string,session string, callInfo *CallInfo)error
-	OnTimeOut(fn string, Expired int64)
+	BeforeHandle(fn string, session string, callInfo *CallInfo) error
+	OnTimeOut(fn string, byteFn int32, Expired int64)
 	OnError(fn string, callInfo *CallInfo, err error)
 
 	/**
@@ -59,8 +58,8 @@ type RPCServer interface {
 	SetListener(listener RPCListener)
 	GetExecuting() int64
 	GetLocalServer() LocalServer
-	Register(id string, f interface{})
-	RegisterGO(id string, f interface{})
+	Register(id string, byteId int32, f interface{})
+	RegisterGO(id string, byteId int32, f interface{})
 	Done() (err error)
 }
 
@@ -69,12 +68,10 @@ type RPCClient interface {
 	NewRedisClient(info *conf.Redis) (err error)
 	NewLocalClient(server RPCServer) (err error)
 	Done() (err error)
-	CallArgs(_func string, ArgsType []string,args [][]byte ) (interface{}, *base.ErrorCode)
-	CallNRArgs(_func string, ArgsType []string,args [][]byte ) (err error)
-	Call(_func string, params ...interface{}) (interface{}, *base.ErrorCode)
-	CallNR(_func string, params ...interface{}) (err error)
+	CallArgs(_func string, SessionId string, args []byte) ([]byte, *base.ErrorCode)
+	CallByteArgs(_func byte, SessionId string, args []byte) ([]byte, *base.ErrorCode)
+	CallNRArgs(_func string, SessionId string, args []byte) (err error)
 }
-
 
 type LocalClient interface {
 	Done() error

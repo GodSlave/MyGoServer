@@ -29,9 +29,9 @@ type rpcserver struct {
 func (s *rpcserver) GetId() string {
 	return s.settings.Id
 }
-func (s *rpcserver) OnInit(module module.Module,app module.App, settings *conf.ModuleSettings) {
+func (s *rpcserver) OnInit(module module.Module, app module.App, settings *conf.ModuleSettings) {
 	s.settings = settings
-	server, err := defaultrpc.NewRPCServer(app,module) //默认会创建一个本地的RPC
+	server, err := defaultrpc.NewRPCServer(app, module) //默认会创建一个本地的RPC
 	if err != nil {
 		log.Warning("Dial: %s", err)
 	}
@@ -63,18 +63,18 @@ func (s *rpcserver) OnDestroy() {
 	}
 }
 
-func (s *rpcserver) Register(id string, f interface{}) {
+func (s *rpcserver) Register(id string, byteId int32, f interface{}) {
 	if s.server == nil {
 		panic("invalid RPCServer")
 	}
-	s.server.Register(id, f)
+	s.server.Register(id, byteId, f)
 }
 
-func (s *rpcserver) RegisterGO(id string, f interface{}) {
+func (s *rpcserver) RegisterGO(id string, byteId int32, f interface{}) {
 	if s.server == nil {
 		panic("invalid RPCServer")
 	}
-	s.server.RegisterGO(id, f)
+	s.server.RegisterGO(id, byteId, f)
 }
 
 func (s *rpcserver) GetRPCServer() mqrpc.RPCServer {

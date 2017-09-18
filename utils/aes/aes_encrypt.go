@@ -19,28 +19,28 @@ import (
 	"fmt"
 )
 
-func NewAesEncrypt(key string) (aes *AesEncrypt, err error) {
+func NewAesEncrypt(key []byte) (aes *AesEncrypt, err error) {
 	keyLen := len(key)
 	if keyLen < 16 {
 		err = fmt.Errorf("The length of res key shall not be less than 16")
 		return
 	}
 	aes = &AesEncrypt{
-		StrKey: key,
+		Key: key,
 	}
 	return aes, nil
 }
 
 type AesEncrypt struct {
-	StrKey string
+	Key []byte
 }
 
 func (this *AesEncrypt) getKey() []byte {
-	keyLen := len(this.StrKey)
+	keyLen := len(this.Key)
 	if keyLen < 16 {
 		panic("The length of res key shall not be less than 16")
 	}
-	arrKey := []byte(this.StrKey)
+	arrKey := []byte(this.Key)
 	if keyLen >= 32 {
 		//取前32个字节
 		return arrKey[:32]
@@ -55,20 +55,25 @@ func (this *AesEncrypt) getKey() []byte {
 
 //加密字符串
 func (this *AesEncrypt) Encrypt(strMesg string) ([]byte, error) {
+	return this.EncryptBytes([]byte(strMesg))
+}
+
+//加密字符串
+func (this *AesEncrypt) EncryptBytes(data []byte) ([]byte, error) {
 	key := this.getKey()
 	var iv = []byte(key)[:aes.BlockSize]
-	encrypted := make([]byte, len(strMesg))
+	encrypted := make([]byte, len(data))
 	aesBlockEncrypter, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
-	aesEncrypter.XORKeyStream(encrypted, []byte(strMesg))
+	aesEncrypter.XORKeyStream(encrypted, data)
 	return encrypted, nil
 }
 
 //解密字符串
-func (this *AesEncrypt) Decrypt(src []byte) (strDesc string, err error) {
+func (this *AesEncrypt) Decrypt(src []byte) (result []byte, err error) {
 	defer func() {
 		//错误处理
 		if e := recover(); e != nil {
@@ -81,9 +86,9 @@ func (this *AesEncrypt) Decrypt(src []byte) (strDesc string, err error) {
 	var aesBlockDecrypter cipher.Block
 	aesBlockDecrypter, err = aes.NewCipher([]byte(key))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, src)
-	return string(decrypted), nil
+	return decrypted, nil
 }

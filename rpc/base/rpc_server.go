@@ -28,12 +28,14 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/base"
+	"github.com/gogo/protobuf/proto"
 )
 
 type RPCServer struct {
 	module         module.Module
 	app            module.App
 	functions      map[string]mqrpc.FunctionInfo
+	byteFunctions  map[int32]mqrpc.FunctionInfo
 	remote_server  *AMQPServer
 	local_server   *LocalServer
 	redis_server   *RedisServer
@@ -51,6 +53,7 @@ func NewRPCServer(app module.App, module module.Module) (mqrpc.RPCServer, error)
 	rpc_server.module = module
 	rpc_server.call_chan_done = make(chan error)
 	rpc_server.functions = make(map[string]mqrpc.FunctionInfo)
+	rpc_server.byteFunctions = make(map[int32]mqrpc.FunctionInfo)
 	rpc_server.mq_chan = make(chan mqrpc.CallInfo, 50)
 	rpc_server.callback_chan = make(chan mqrpc.CallInfo, 50)
 
@@ -105,29 +108,34 @@ func (s *RPCServer) GetExecuting() int64 {
 }
 
 // you must call the function before calling Open and Go
-func (s *RPCServer) Register(id string, f interface{}) {
+func (s *RPCServer) Register(id string, byteId int32, f interface{}) {
 
 	if _, ok := s.functions[id]; ok {
 		panic(fmt.Sprintf("function id %v: already registered", id))
 	}
 
-	s.functions[id] = *&mqrpc.FunctionInfo{
+	fuction1 := *&mqrpc.FunctionInfo{
 		Function:  f,
 		Goroutine: false,
 	}
+
+	s.functions[id] = fuction1
+	s.byteFunctions[byteId] = fuction1
 }
 
 // you must call the function before calling Open and Go
-func (s *RPCServer) RegisterGO(id string, f interface{}) {
+func (s *RPCServer) RegisterGO(id string, byteId int32, f interface{}) {
 
 	if _, ok := s.functions[id]; ok {
 		panic(fmt.Sprintf("function id %v: already registered", id))
 	}
 
-	s.functions[id] = *&mqrpc.FunctionInfo{
+	fuction1 := *&mqrpc.FunctionInfo{
 		Function:  f,
 		Goroutine: true,
 	}
+	s.functions[id] = fuction1
+	s.byteFunctions[byteId] = fuction1
 }
 
 func (s *RPCServer) Done() (err error) {
@@ -193,7 +201,7 @@ func (s *RPCServer) on_call_handle(calls <-chan mqrpc.CallInfo, callbacks chan<-
 				if callInfo.RpcInfo.Expired < (time.Now().UnixNano() / 1000000) {
 					//请求超时了,无需再处理
 					if s.listener != nil {
-						s.listener.OnTimeOut(callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired)
+						s.listener.OnTimeOut(callInfo.RpcInfo.Fn, callInfo.RpcInfo.ByteFn, callInfo.RpcInfo.Expired)
 					} else {
 						log.Warning("timeout: This is Call", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000000)
 					}
@@ -234,7 +242,14 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		}
 	}()
 
-	functionInfo, ok := s.functions[callInfo.RpcInfo.Fn]
+	var functionInfo mqrpc.FunctionInfo
+	var ok bool
+	if callInfo.RpcInfo.Fn != "" {
+		functionInfo, ok = s.functions[callInfo.RpcInfo.Fn]
+	} else {
+		functionInfo, ok = s.byteFunctions[callInfo.RpcInfo.ByteFn]
+	}
+
 	if !ok {
 		_errorCallback(callInfo.RpcInfo.Cid, base.NewError(404, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn)))
 		return
@@ -287,25 +302,46 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		var session string = ""
 		var in []reflect.Value
 		in = make([]reflect.Value, funcType.NumIn())
+		userIndex := 0
+		paramsIndex := 0
+		if len(in) > 1 {
+			userIndex = 0
+			paramsIndex = 1
+		} else if len(in) == 1 {
+			if params == nil || len(params) == 0 {
+				userIndex = 0
+				paramsIndex = -1
+			} else {
+				userIndex = -1
+				paramsIndex = 0
+			}
+		}
 
-		if len(in) > 0 && len(params) == len(in) {
-			param1type := funcType.In(0)
+		if userIndex >= 0 {
+			param1type := funcType.In(userIndex)
+			//TODO map session to real user id
 			if param1type.Kind() == reflect.String {
-				in[0] = reflect.ValueOf(string(params[0]))
+				in[userIndex] = reflect.ValueOf(string(params[userIndex]))
+			}
+		}
+
+		if (paramsIndex >= 0) {
+			paramType := funcType.In(paramsIndex)
+			log.Info(paramType.Name())
+			v := reflect.New(paramType.Elem()).Interface()
+			//TODO add proto unmarshal
+			var err error
+			if callInfo.RpcInfo.Fn != "" {
+				err = json.Unmarshal(params, &v)
+			} else {
+				err = proto.Unmarshal(params, v.(proto.Message))
 			}
 
-			for k, _ := range in {
-				if k > 0 {
-					paramType := funcType.In(k)
-					log.Info(paramType.Name())
-					v := reflect.New(paramType.Elem()).Interface()
-					err := json.Unmarshal(params[k], &v)
-					if err != nil {
-						panic(err)
-					}
-					in[k] = reflect.ValueOf(v)
-				}
+			if err != nil {
+				log.Error(err.Error())
+				panic(err)
 			}
+			in[paramsIndex] = reflect.ValueOf(v)
 		}
 
 		if s.listener != nil {
@@ -326,7 +362,11 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				case reflect.String:
 					result = []byte(value.Interface().(string))
 				default:
-					result, _ = json.Marshal(value.Interface())
+					if callInfo.RpcInfo.Fn != "" {
+						result, _ = json.Marshal(value.Interface())
+					} else {
+						result, _ = proto.Marshal(value.Interface().(proto.Message))
+					}
 				}
 			}
 

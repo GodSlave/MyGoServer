@@ -66,7 +66,7 @@ type ModuleReport struct {
 	Id         string
 	Version    string
 	ProcessID  string
-	Executing  int64                         //当前正在执行的函数数量,暂态的,下一次上报时刷新
+	Executing  int64                                    //当前正在执行的函数数量,暂态的,下一次上报时刷新
 	ReportForm map[string]*basemodule.StatisticalMethod //运行状态报表
 }
 
@@ -78,6 +78,7 @@ type Master struct {
 	ModuleReports map[string]*ModuleReport //moduleID -- ModuleReport
 	rwmutex       sync.RWMutex
 }
+
 func (m *Master) GetType() string {
 	//很关键,需要与配置文件中的Module配置对应
 	return "Master"
@@ -112,9 +113,9 @@ func (m *Master) OnInit(app module.App, settings *conf.ModuleSettings) {
 		ps.Init(app.GetSettings().Master, psetting)
 		m.ProcessMap[psetting.ProcessID] = ps
 	}
-	m.GetServer().RegisterGO("HD_Start_Process", m.startProcess)
-	m.GetServer().RegisterGO("HD_Stop_Process", m.stopProcess)
-	m.GetServer().RegisterGO("ReportForm", m.ReportForm)
+	m.GetServer().RegisterGO("HD_Start_Process", 1, m.startProcess)
+	m.GetServer().RegisterGO("HD_Stop_Process", 2, m.stopProcess)
+	m.GetServer().RegisterGO("ReportForm", 3, m.ReportForm)
 }
 
 func (m *Master) Run(closeSig chan bool) {

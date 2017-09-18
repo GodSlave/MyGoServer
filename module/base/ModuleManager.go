@@ -116,15 +116,17 @@ func (mer *ModuleManager) ReportStatistics(args interface{}) {
 			mi := m.mi
 			switch value := mi.(type) {
 			case module.RPCModule:
+				value.GetType()
+				//TODO will add 汇报统计
 				//汇报统计
-				servers := mer.app.GetServersByType("Master")
-				if len(servers) == 1 {
-					b, _ := value.GetStatistical()
-					_, err := servers[0].Call("ReportForm", value.GetType(), m.settings.ProcessID, m.settings.Id, value.Version(), b, value.GetExecuting())
-					if err != nil {
-						log.Warning("Report To Master error :", err)
-					}
-				}
+				//servers := mer.app.GetServersByType("Master")
+				//if len(servers) == 1 {
+				//	b, _ := value.GetStatistical()
+				//	_, err := servers[0].Call("ReportForm", value.GetType(), m.settings.ProcessID, m.settings.Id, value.Version(), b, value.GetExecuting())
+				//	if err != nil {
+				//		log.Warning("Report To Master error :", err)
+				//	}
+				//}
 			default:
 			}
 		}

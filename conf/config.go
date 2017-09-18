@@ -53,8 +53,6 @@ type DB struct {
 }
 
 
-
-
 type Rpc struct {
 	RpcExpired  int //远程访问最后期限值 单位秒[默认5秒] 这个值指定了在客户端可以等待服务端多长时间来应答
 }
@@ -75,6 +73,7 @@ type Redis struct {
 
 type ModuleSettings struct {
 	Id        string
+	ByteID	  byte
 	Host      string
 	ProcessID string
 	Settings  map[string]interface{}

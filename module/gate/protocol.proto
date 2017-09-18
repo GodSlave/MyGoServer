@@ -1,0 +1,20 @@
+syntax = "proto3";
+package Dolphin.Protocol;
+
+//请求和响应都需要的协议数据
+message ProtocolBase
+{
+	uint32 identifier = 1; //客户端使用的标识码
+}
+
+message RequestBase
+{
+	ProtocolBase Protocol = 1;
+}
+
+message ResponseBase
+{
+	ProtocolBase Protocol = 1;
+	uint32 state = 2; //状态码
+	string msg = 3; //调试信息
+}

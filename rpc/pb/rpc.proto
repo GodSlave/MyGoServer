@@ -7,8 +7,9 @@ message RPCInfo {
     string track = 4;
     int64 Expired = 5;
     bool Reply = 6;
-    repeated string ArgsType = 7;
-    repeated bytes Args = 8;
+    string SessionId = 7;
+    bytes Args = 8;
+    int32 ByteFn = 9;
 }
 
 message ResultInfo {

@@ -25,9 +25,21 @@ import (
 func NewApp() module.App {
 	newApp := new(DefaultApp)
 	newApp.routes = map[string]func(app module.App, Type string, hash string) module.ServerSession{}
+	newApp.byteRoutes = map[byte]func(app module.App, Type byte, hash string) module.ServerSession{}
+	newApp.byteServerList = map[byte]module.ServerSession{}
 	newApp.serverList = map[string]module.ServerSession{}
 	newApp.defaultRoutes = func(app module.App, Type string, hash string) module.ServerSession {
 		servers := app.GetServersByType(Type)
+		if len(servers) == 0 {
+			log.Error("no smodule find %s", Type)
+			return nil
+		}
+		index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
+		return servers[index]
+	}
+
+	newApp.byteDefaultRoutes = func(app module.App, Type byte, hash string) module.ServerSession {
+		servers := app.GetServersByByteType(Type)
 		if len(servers) == 0 {
 			log.Error("no smodule find %s", Type)
 			return nil
@@ -43,13 +55,16 @@ func NewApp() module.App {
 
 type DefaultApp struct {
 	module.App
-	version       string
-	serverList    map[string]module.ServerSession
-	settings      conf.Config
-	routes        map[string]func(app module.App, Type string, hash string) module.ServerSession
-	defaultRoutes func(app module.App, Type string, hash string) module.ServerSession
-	rpcserializes map[string]module.RPCSerialize
-	Engine        *xorm.Engine
+	version           string
+	serverList        map[string]module.ServerSession
+	byteServerList    map[byte]module.ServerSession
+	settings          conf.Config
+	routes            map[string]func(app module.App, Type string, hash string) module.ServerSession
+	byteRoutes        map[byte]func(app module.App, Type byte, hash string) module.ServerSession
+	defaultRoutes     func(app module.App, Type string, hash string) module.ServerSession
+	byteDefaultRoutes func(app module.App, Type byte, hash string) module.ServerSession
+	rpcserializes     map[string]module.RPCSerialize
+	Engine            *xorm.Engine
 }
 
 func (app *DefaultApp) Run(mods ...module.Module) error {
@@ -81,9 +96,8 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 
 	//sql
 	sql := db.BaseSql{
-		Url: "root:woaini123@/gameserver?charset=utf8",
 	}
-	//sql.Url = conf.Conf.DB
+	sql.Url = conf.Conf.DB.Url
 	sql.InitDB()
 	sql.CheckMigrate()
 	app.Engine = sql.Engine
@@ -116,6 +130,15 @@ func (app *DefaultApp) getRoute(moduleType string) func(app module.App, Type str
 	if fn == nil {
 		//如果没有设置的路由,则使用默认的
 		return app.defaultRoutes
+	}
+	return fn
+}
+
+func (app *DefaultApp) getByteRoute(moduleType byte) func(app module.App, Type byte, hash string) module.ServerSession {
+	fn := app.byteRoutes[moduleType]
+	if fn == nil {
+		//如果没有设置的路由,则使用默认的
+		return app.byteDefaultRoutes
 	}
 	return fn
 }
@@ -161,8 +184,9 @@ func (app *DefaultApp) OnInit(settings conf.Config) error {
 				//如果远程的rpc存在则创建一个对应的客户端
 				client.NewRedisClient(moduel.Redis)
 			}
-			session := basemodule.NewServerSession(moduel.Id, Type, client)
+			session := basemodule.NewServerSession(moduel.Id, Type, moduel.ByteID, client)
 			app.serverList[moduel.Id] = session
+			app.byteServerList[moduel.ByteID] = session
 			log.Info("RPCClient create success type(%s) id(%s)", Type, moduel.Id)
 		}
 	}
@@ -197,10 +221,21 @@ func (app *DefaultApp) GetServersById(serverId string) (module.ServerSession, er
 		return nil, fmt.Errorf("Server(%s) Not Found", serverId)
 	}
 }
+
 func (app *DefaultApp) GetServersByType(Type string) []module.ServerSession {
 	sessions := make([]module.ServerSession, 0)
 	for _, session := range app.serverList {
 		if session.GetType() == Type {
+			sessions = append(sessions, session)
+		}
+	}
+	return sessions
+}
+
+func (app *DefaultApp) GetServersByByteType(Type byte) []module.ServerSession {
+	sessions := make([]module.ServerSession, 0)
+	for _, session := range app.serverList {
+		if session.GetByteType() == Type {
 			sessions = append(sessions, session)
 		}
 	}
@@ -219,7 +254,16 @@ func (app *DefaultApp) GetRouteServers(filter string, hash string) (s module.Ser
 	route := app.getRoute(moduleType)
 	s = route(app, moduleType, hash)
 	if s == nil {
-		err = fmt.Errorf("Server(type : %s) Not Found", moduleType)
+		log.Error("Server(type : %s) Not Found", moduleType)
+	}
+	return
+}
+
+func (app *DefaultApp) GetByteRouteServers(filter byte, hash string) (s module.ServerSession, err error) {
+	route := app.getByteRoute(filter)
+	s = route(app, filter, hash)
+	if s == nil {
+		log.Error("Server(type : %x) Not Found", filter)
 	}
 	return
 }
@@ -228,38 +272,21 @@ func (app *DefaultApp) GetSettings() conf.Config {
 	return app.settings
 }
 
-func (app *DefaultApp) RpcInvoke(module module.RPCModule, moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
+func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result interface{}, err *base.ErrorCode) {
 	server, e := app.GetRouteServers(moduleType, module.GetServerId())
 	if e != nil {
 		err = base.NewError(404, e.Error())
 		return
 	}
-	return server.Call(_func, params...)
+	return server.CallArgs(_func, sessionId, args)
 }
 
-func (app *DefaultApp) RpcInvokeNR(module module.RPCModule, moduleType string, _func string, params ...interface{}) (err error) {
+func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (err error) {
 	server, err := app.GetRouteServers(moduleType, module.GetServerId())
 	if err != nil {
 		return
 	}
-	return server.CallNR(_func, params...)
-}
-
-func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err *base.ErrorCode) {
-	server, e := app.GetRouteServers(moduleType, module.GetServerId())
-	if e != nil {
-		err = base.NewError(404, e.Error())
-		return
-	}
-	return server.CallArgs(_func, ArgsType, args)
-}
-
-func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType string, _func string, ArgsType []string, args [][]byte) (err error) {
-	server, err := app.GetRouteServers(moduleType, module.GetServerId())
-	if err != nil {
-		return
-	}
-	return server.CallNRArgs(_func, ArgsType, args)
+	return server.CallNRArgs(_func, sessionId, args)
 }
 
 func (app *DefaultApp) GetSqlEngine() *xorm.Engine {

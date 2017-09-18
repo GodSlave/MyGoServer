@@ -68,8 +68,10 @@ type Session struct {
 
 	// Serialize access to this session
 	mu sync.Mutex
-
+	//client ID
 	Id string
+	//Enctrypt key
+	AesKey []byte
 }
 
 func (this *Session) Init(msg *message.ConnectMessage) error {

@@ -101,38 +101,38 @@ func (m *BaseModule) GetRouteServers(moduleType string, hash string) (s module.S
 	return m.App.GetRouteServers(moduleType, hash)
 }
 
-func (m *BaseModule) RpcInvoke(moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
+//func (m *BaseModule) RpcInvoke(moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
+//	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
+//	if e != nil {
+//		err = base.NewError(404, e.Error())
+//		return
+//	}
+//	return server.Call(_func, params...)
+//}
+//
+//func (m *BaseModule) RpcInvokeNR(moduleType string, _func string, params ...interface{}) (err error) {
+//	server, err := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
+//	if err != nil {
+//		return
+//	}
+//	return server.CallNR(_func, params...)
+//}
+
+func (m *BaseModule) RpcInvokeArgs(moduleType string, _func string, SessionID string, args []byte) (result interface{}, err *base.ErrorCode) {
 	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
 	if e != nil {
 		err = base.NewError(404, e.Error())
 		return
 	}
-	return server.Call(_func, params...)
+	return server.CallArgs(_func, SessionID, args)
 }
 
-func (m *BaseModule) RpcInvokeNR(moduleType string, _func string, params ...interface{}) (err error) {
+func (m *BaseModule) RpcInvokeNRArgs(moduleType string, _func string, SessionId string, args []byte) (err error) {
 	server, err := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return
 	}
-	return server.CallNR(_func, params...)
-}
-
-func (m *BaseModule) RpcInvokeArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (result interface{}, err *base.ErrorCode) {
-	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
-	if e != nil {
-		err = base.NewError(404, e.Error())
-		return
-	}
-	return server.CallArgs(_func, ArgsType, args)
-}
-
-func (m *BaseModule) RpcInvokeNRArgs(moduleType string, _func string, ArgsType []string, args [][]byte) (err error) {
-	server, err := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
-	if err != nil {
-		return
-	}
-	return server.CallNRArgs(_func, ArgsType, args)
+	return server.CallNRArgs(_func, SessionId, args)
 }
 
 func (m *BaseModule) BeforeHandle(fn string, session string, callInfo *mqrpc.CallInfo) error {
@@ -142,7 +142,7 @@ func (m *BaseModule) BeforeHandle(fn string, session string, callInfo *mqrpc.Cal
 	return nil
 }
 
-func (m *BaseModule) OnTimeOut(fn string, Expired int64) {
+func (m *BaseModule) OnTimeOut(fn string, byteFn int32, Expired int64) {
 	m.rwmutex.RLock()
 	if statisticalMethod, ok := m.statistical[fn]; ok {
 		statisticalMethod.ExecTimeout++
@@ -158,7 +158,7 @@ func (m *BaseModule) OnTimeOut(fn string, Expired int64) {
 	}
 	m.rwmutex.RUnlock()
 	if m.listener != nil {
-		m.listener.OnTimeOut(fn, Expired)
+		m.listener.OnTimeOut(fn, byteFn, Expired)
 	}
 }
 func (m *BaseModule) OnError(fn string, callInfo *mqrpc.CallInfo, err error) {

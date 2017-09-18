@@ -123,6 +123,8 @@ type Service struct {
 	rmsgs []*message.PublishMessage
 
 	msgProcess mymqtt.MsgProcess
+
+	Services map[string]*Service
 }
 
 func (this *Service) start() error {
@@ -242,6 +244,8 @@ func (this *Service) stop() {
 		this.onPublish(this.sess.Will)
 	}
 
+	delete(this.Services,this.sess.Id)
+
 	// Remove the client topics manager
 	if this.client {
 		topics.Unregister(this.sess.ID())
@@ -251,6 +255,8 @@ func (this *Service) stop() {
 	if this.sess.Cmsg.CleanSession() && this.sessMgr != nil {
 		this.sessMgr.Del(this.sess.ID())
 	}
+
+
 
 	this.conn = nil
 	this.in = nil
