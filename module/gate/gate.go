@@ -121,16 +121,19 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 	}
 	topic := msg.Topic()
 	payload := msg.Payload()
-	aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
-	payload, err := aesCipher.Decrypt(payload)
-	log.Info(string(payload))
-	if err != nil {
-		log.Error(err.Error())
-		return false
+	if m.GetApp().GetSettings().Secret {
+		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
+		payload, err := aesCipher.Decrypt(payload)
+		log.Info(string(payload))
+		if err != nil {
+			log.Error(err.Error())
+			return false
+		}
 	}
+
 	var msgContent MsgFormat
 	packetId := msg.PacketId()
-	err = json.Unmarshal(payload, &msgContent)
+	err := json.Unmarshal(payload, &msgContent)
 	if err == nil {
 		arg1, err := json.Marshal(msgContent.Params)
 		if err != nil {
@@ -183,12 +186,17 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 	}
 	topic := msg.Topic()
 	payload := msg.Payload()
-	aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
-	payload, err := aesCipher.Decrypt(payload)
-	if err != nil {
-		log.Error(err.Error())
-		return false
+
+	if m.GetApp().GetSettings().Secret {
+		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
+		var err error
+		payload, err = aesCipher.Decrypt(payload)
+		if err != nil {
+			log.Error(err.Error())
+			return false
+		}
 	}
+
 	packetId := msg.PacketId()
 	serverSession, err := m.App.GetByteRouteServers(payload[0], "")
 	if err != nil {
@@ -210,12 +218,16 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessio
 	publish.SetTopic(topic)
 	log.Info(string(topic))
 	log.Info(string(body))
-	aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
-	body, err := aesCipher.EncryptBytes(body)
-	if err != nil {
-		log.Error(err.Error())
-		return err
+	if (m.GetApp().GetSettings().Secret) {
+		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
+		var err error
+		body, err = aesCipher.EncryptBytes(body)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
 	}
+
 	publish.SetPayload(body)
 	publish.SetPacketId(packetId)
 	publish.SetQoS(1)

@@ -38,23 +38,23 @@ func LoadConfig(Path string) {
 }
 
 type Config struct {
-	Rpc	Rpc
-	Module map[string][]*ModuleSettings
-	Mqtt   Mqtt
-	Master Master
-	Debug  bool
-	DB  DB
+	Rpc        Rpc
+	Module     map[string][]*ModuleSettings
+	Mqtt       Mqtt
+	Master     Master
+	Debug      bool
+	DB         DB
 	PrivateKey string
+	Secret     bool
 }
 
 type DB struct {
 	DBtype string
-	Url	string
+	Url    string
 }
 
-
 type Rpc struct {
-	RpcExpired  int //远程访问最后期限值 单位秒[默认5秒] 这个值指定了在客户端可以等待服务端多长时间来应答
+	RpcExpired int //远程访问最后期限值 单位秒[默认5秒] 这个值指定了在客户端可以等待服务端多长时间来应答
 }
 
 type Rabbitmq struct {
@@ -67,18 +67,18 @@ type Rabbitmq struct {
 }
 
 type Redis struct {
-	Uri          string //redis://:[password]@[ip]:[port]/[db]
-	Queue        string
+	Uri   string //redis://:[password]@[ip]:[port]/[db]
+	Queue string
 }
 
 type ModuleSettings struct {
 	Id        string
-	ByteID	  byte
+	ByteID    byte
 	Host      string
 	ProcessID string
 	Settings  map[string]interface{}
 	Rabbitmq  *Rabbitmq
-	Redis  	  *Redis
+	Redis     *Redis
 }
 
 type Mqtt struct {
