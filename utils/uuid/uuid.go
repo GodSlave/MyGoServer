@@ -31,7 +31,7 @@ var seeded bool = false
 var uuidRegex *regexp.Regexp = regexp.MustCompile(`^\{?([a-fA-F0-9]{8})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{12})\}?$`)
 var safeBytes = []byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
 	'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '_'}
+	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 var numbers = []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 // UUID type.
 type UUID [16]byte

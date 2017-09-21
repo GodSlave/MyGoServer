@@ -205,6 +205,15 @@ func (s *RPCServer) on_call_handle(calls <-chan mqrpc.CallInfo, callbacks chan<-
 					} else {
 						log.Warning("timeout: This is Call", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000000)
 					}
+					resultInfo := rpcpb.NewResultInfo(
+						callInfo.RpcInfo.Cid,
+						base.ErrRequestTimeout.Desc,
+						base.ErrRequestTimeout.ErrorCode,
+						argsutil.BYTES,
+						nil,
+					)
+					callInfo.Result = *resultInfo
+					callbacks <- callInfo
 				} else {
 					s.runFunc(callInfo, callbacks)
 				}
@@ -322,14 +331,18 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 			//TODO map session to real user id
 			if param1type.Kind() == reflect.String {
 				in[userIndex] = reflect.ValueOf(string(params[userIndex]))
+
+
+			}else{
+
 			}
+
 		}
 
 		if (paramsIndex >= 0) {
 			paramType := funcType.In(paramsIndex)
 			log.Info(paramType.Name())
 			v := reflect.New(paramType.Elem()).Interface()
-			//TODO add proto unmarshal
 			var err error
 			if callInfo.RpcInfo.Fn != "" {
 				err = json.Unmarshal(params, &v)
@@ -359,6 +372,9 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		for k, value := range out {
 			if k == 0 {
 				switch value.Kind() {
+				case reflect.Invalid:
+					result = nil
+					log.Info("invalid result ")
 				case reflect.String:
 					result = []byte(value.Interface().(string))
 				default:

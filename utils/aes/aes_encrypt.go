@@ -67,7 +67,7 @@ func (this *AesEncrypt) EncryptBytes(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
+	aesEncrypter := cipher.NewCTR(aesBlockEncrypter, iv)
 	aesEncrypter.XORKeyStream(encrypted, data)
 	return encrypted, nil
 }
@@ -88,7 +88,7 @@ func (this *AesEncrypt) Decrypt(src []byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
+	aesDecrypter := cipher.NewCTR(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, src)
 	return decrypted, nil
 }

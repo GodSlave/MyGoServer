@@ -187,6 +187,10 @@ func (this *Client) getSession(svc *Service, req *message.ConnectMessage, resp *
 	return svc.sess.Init(req)
 }
 
+func (this *Client) GetSession() *sessions.Session {
+	return this.svc.sess
+}
+
 func (this *Client) checkConfiguration() {
 	if this.KeepAlive == 0 {
 		this.KeepAlive = DefaultKeepAlive

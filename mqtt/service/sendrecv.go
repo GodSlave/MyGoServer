@@ -252,6 +252,11 @@ func (this *Service) readMessage(mtype message.MessageType, total int) (message.
 	}
 
 	n, err = msg.Decode(b)
+	log.Info("%v  %v", msg.Name(), msg.Type())
+	switch msg.(type) {
+	case *message.PublishMessage:
+		log.Info(msg.(*message.PublishMessage).String())
+	}
 	return msg, n, err
 }
 

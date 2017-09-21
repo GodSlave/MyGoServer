@@ -61,6 +61,10 @@ func (mer *ModuleManager) Init(app module.App, ProcessID string) {
 						mer.runMods = append(mer.runMods, mer.mods[i]) //这里加入能够运行的组件
 						mer.mods[i].settings = setting
 					}
+
+
+
+
 				}
 				break //跳出内部循环
 			}

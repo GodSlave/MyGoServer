@@ -12,13 +12,17 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/gogo/protobuf/proto"
 	"github.com/GodSlave/MyGoServer/utils/aes"
+	"github.com/garyburd/redigo/redis"
+	"github.com/go-xorm/xorm"
 )
 
 var RPC_PARAM_SESSION_TYPE = "SESSION"
 
 type Gate struct {
 	basemodule.BaseModule
-	svr *service.Server
+	svr       *service.Server
+	redisPool *redis.Pool
+	sqlEngine *xorm.Engine
 }
 
 type MsgFormat struct {
@@ -44,20 +48,23 @@ func (m *Gate) Version() string {
 func (m *Gate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	//read setting
 	m.BaseModule.OnInit(m, app, settings) //这是必须的
+	m.redisPool = app.GetRedis()
 }
 
 func (m *Gate) Run(closeSig chan bool) {
+
 	m.svr = &service.Server{
 		KeepAlive:        300,           // seconds
 		ConnectTimeout:   2,             // seconds
 		SessionsProvider: "mem",         // keeps sessions in memory
 		Authenticator:    "mockSuccess", // always succeed
 		TopicsProvider:   "mem",         // keeps topic subscriptions in memory
-		MsgAgent:         m,
+		BusinessAgent:    m,
 		Services:         make(map[string]*service.Service),
 	}
 	// Listen and serve connections at localhost:1883
-	m.svr.ListenAndServe("tcp://0.0.0.0:1883")
+	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
+	m.svr.ListenAndServe(addr)
 	<-closeSig
 	m.svr.Close()
 
@@ -73,7 +80,7 @@ func (m *Gate) robot(session sessions.Session, r []byte) (result string, err str
 	return string(r), ""
 }
 
-func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool {
+func (m *Gate) OnNewMessage(msg *message.PublishMessage, sess *sessions.Session) bool {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -81,7 +88,6 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 		}
 	}()
 	topic := msg.Topic()
-	log.Info(msg.String())
 	if topic[0] == 'i' {
 		return m.progressJsonMessage(msg, sess)
 	} else if topic[0] == 'f' {
@@ -93,10 +99,10 @@ func (m *Gate) Process(msg *message.PublishMessage, sess *sessions.Session) bool
 
 func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.Session) bool {
 	toResult := func(Topic []byte, Result []byte, error *base.ErrorCode, packetId uint16) (err error) {
-		r := &ResultInfo{
-			Error:     error.Desc,
-			Result:    Result,
-			ErrorCode: error.ErrorCode,
+		r := &AllResponse{
+			Msg:    error.Desc,
+			Result: Result,
+			State:  error.ErrorCode & 0xff,
 		}
 		b, err := json.Marshal(r)
 		if err == nil {
@@ -105,8 +111,8 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 				log.Error(err.Error())
 			}
 		} else {
-			r = &ResultInfo{
-				Error:  err.Error(),
+			r = &AllResponse{
+				Msg:    err.Error(),
 				Result: nil,
 			}
 			log.Error(err.Error())
@@ -123,7 +129,9 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 	payload := msg.Payload()
 	if m.GetApp().GetSettings().Secret {
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
-		payload, err := aesCipher.Decrypt(payload)
+		var err error
+		log.Info("%v", payload)
+		payload, err = aesCipher.Decrypt(payload)
 		log.Info(string(payload))
 		if err != nil {
 			log.Error(err.Error())
@@ -157,27 +165,32 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 }
 
 func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.Session) bool {
-	toResult := func(Topic []byte, Result []byte, error *base.ErrorCode, packetId uint16, ) (err error) {
-		r := &ResultInfo{
-			Error:     error.Desc,
-			Result:    Result,
-			ErrorCode: error.ErrorCode,
+	toResult := func(Topic []byte, Result []byte, method [] byte, error *base.ErrorCode, packetId uint16, ) (err error) {
+		r := &AllResponse{
+			Msg:    error.Desc,
+			Result: Result,
+			State:  error.ErrorCode & 0xff,
 		}
 		b, err := proto.Marshal(r)
 		if err == nil {
-			err := m.WriteMsg(Topic, b, packetId, sess)
+			realResult := make([]byte, len(b)+2)
+			copy(realResult[0:2], method[0:2])
+			copy(realResult[2:], b)
+			err := m.WriteMsg(Topic, realResult, packetId, sess)
 			if (err != nil) {
 				log.Error(err.Error())
 			}
 		} else {
-			r = &ResultInfo{
-				Error:  err.Error(),
+			r = &AllResponse{
+				Msg:    err.Error(),
 				Result: nil,
 			}
 			log.Error(err.Error())
-
 			br, _ := proto.Marshal(r)
-			err := m.WriteMsg(Topic, br, packetId, sess)
+			realResult := make([]byte, len(br)+2)
+			copy(realResult[0:2], method[0:2])
+			copy(realResult[2:], br)
+			err := m.WriteMsg(Topic, realResult, packetId, sess)
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -191,6 +204,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
 		payload, err = aesCipher.Decrypt(payload)
+		log.Info("%v", payload)
 		if err != nil {
 			log.Error(err.Error())
 			return false
@@ -201,23 +215,19 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 	serverSession, err := m.App.GetByteRouteServers(payload[0], "")
 	if err != nil {
 		log.Error("Service(type:%x) not found", payload[0])
-		toResult(topic, nil, base.ErrNotFound, packetId)
+		toResult(topic, nil, payload[0:2], base.ErrNotFound, packetId)
 		return false
 	}
 
-	result, e := serverSession.CallByteArgs(payload[1], sess.Id, payload[3:])
-	realResult := make([]byte, len(result)+3)
-	copy(realResult[0:3], payload[0:3])
-	copy(realResult[3:], result)
-	toResult(topic, realResult, e, packetId)
+	result, e := serverSession.CallByteArgs(payload[1], sess.Id, payload[2:])
+	log.Debug("%v", result)
+	toResult(topic, result, payload[0:2], e, packetId)
 	return true
 }
 
 func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessions.Session) error {
 	publish := message.NewPublishMessage()
 	publish.SetTopic(topic)
-	log.Info(string(topic))
-	log.Info(string(body))
 	if (m.GetApp().GetSettings().Secret) {
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
@@ -229,12 +239,17 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessio
 	}
 
 	publish.SetPayload(body)
-	publish.SetPacketId(packetId)
 	publish.SetQoS(1)
-
+	publish.SetPacketId(packetId)
+	log.Debug(publish.String())
 	return m.svr.PublishToClient(publish, sess.Id, nil)
 }
 
-func (m *Gate) DisConnect(sess *sessions.Session) {
+func (m *Gate) OnDisConnect(sess *sessions.Session) {
 	log.Info("%s disconnect ", sess.Id)
+	m.App.OnUserLogOut(sess.Id)
+}
+
+func (m *Gate) OnConnect(sess *sessions.Session) {
+	m.App.OnUserLogin(sess.Id)
 }

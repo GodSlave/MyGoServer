@@ -82,7 +82,7 @@ type Server struct {
 	TopicsProvider string
 
 	// delegate some MQTT message
-	MsgAgent mymqtt.MsgProcess
+	BusinessAgent mymqtt.MsgProcess
 	// authMgr is the authentication manager that we are going to use for authenticating
 	// incoming connections
 	authMgr *auth.Manager
@@ -312,13 +312,12 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 	}
 
 	// Authenticate the user, if error, return error and exit
-	if err = this.authMgr.Authenticate(string(req.Username()), string(req.Password())); err != nil {
+	if err = this.authMgr.Authenticate(string(req.Username()), string(req.Password()), string(req.ClientId())); err != nil {
 		resp.SetReturnCode(message.ErrBadUsernameOrPassword)
 		resp.SetSessionPresent(false)
 		writeMessage(conn, resp)
 		return nil, err
 	}
-
 	if len(req.ClientId()) < 32 || len(req.ClientId()) > 64 {
 		resp.SetReturnCode(message.ErrIdentifierRejected)
 		resp.SetSessionPresent(false)
@@ -349,11 +348,12 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		conn:       conn,
 		sessMgr:    this.sessMgr,
 		topicsMgr:  this.topicsMgr,
-		msgProcess: this.MsgAgent,
+		msgProcess: this.BusinessAgent,
 		Services:   this.Services,
 	}
 	err = this.getSession(svc, req, resp)
 	this.Services[string(req.ClientId())] = svc
+
 	if err != nil {
 		return nil, err
 	}
@@ -362,6 +362,9 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 
 	if err = writeMessage(c, resp); err != nil {
 		return nil, err
+	}
+	if this.BusinessAgent != nil {
+		this.BusinessAgent.OnConnect(svc.sess)
 	}
 
 	svc.inStat.increment(int64(req.Len()))

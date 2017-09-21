@@ -18,6 +18,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/go-xorm/xorm"
 	"github.com/GodSlave/MyGoServer/base"
+	"github.com/garyburd/redigo/redis"
 )
 
 type ServerSession interface {
@@ -61,6 +62,13 @@ type App interface {
 	GetRPCSerialize() (map[string]RPCSerialize)
 
 	GetSqlEngine() *xorm.Engine
+
+	GetRedis() *redis.Pool
+
+	OnUserLogOut(sessionId string)
+	OnUserLogin(sessionId string)
+	VerifyUser(sessionId string) (user *base.BaseUser)
+	VerifyUserID(sessionId string) (userID string)
 }
 
 type Module interface {

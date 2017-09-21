@@ -6,8 +6,10 @@ import (
 )
 
 type MsgProcess interface {
-	Process(msg *message.PublishMessage, sess *sessions.Session) bool
+	OnNewMessage(msg *message.PublishMessage, sess *sessions.Session) bool
 
-	DisConnect(sess *sessions.Session)
+	OnDisConnect(sess *sessions.Session)
+
+	OnConnect(sess *sessions.Session)
 
 }

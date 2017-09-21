@@ -20,6 +20,9 @@ import (
 	"github.com/GodSlave/MyGoServer/db"
 	"github.com/go-xorm/xorm"
 	"github.com/GodSlave/MyGoServer/base"
+	"github.com/garyburd/redigo/redis"
+	"github.com/GodSlave/MyGoServer/utils"
+	"github.com/GodSlave/MyGoServer/module/app"
 )
 
 func NewApp() module.App {
@@ -41,7 +44,7 @@ func NewApp() module.App {
 	newApp.byteDefaultRoutes = func(app module.App, Type byte, hash string) module.ServerSession {
 		servers := app.GetServersByByteType(Type)
 		if len(servers) == 0 {
-			log.Error("no smodule find %s", Type)
+			log.Error("no module find %v", Type)
 			return nil
 		}
 		index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
@@ -50,6 +53,7 @@ func NewApp() module.App {
 
 	newApp.rpcserializes = map[string]module.RPCSerialize{}
 	newApp.version = "0.0.1"
+	newApp.users = map[string]*base.BaseUser{}
 	return newApp
 }
 
@@ -65,6 +69,8 @@ type DefaultApp struct {
 	byteDefaultRoutes func(app module.App, Type byte, hash string) module.ServerSession
 	rpcserializes     map[string]module.RPCSerialize
 	Engine            *xorm.Engine
+	redisPool         *redis.Pool
+	users             map[string]*base.BaseUser
 }
 
 func (app *DefaultApp) Run(mods ...module.Module) error {
@@ -94,16 +100,25 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
 	log.Info("mqant %v starting up", app.version)
 
+	log.Info("start connect DB %v", conf.Conf.DB.SQL)
 	//sql
 	sql := db.BaseSql{
 	}
-	sql.Url = conf.Conf.DB.Url
+	sql.Url = conf.Conf.DB.SQL
 	sql.InitDB()
 	sql.CheckMigrate()
 	app.Engine = sql.Engine
 
+	url := app.GetSettings().DB.Redis
+	app.redisPool = utils.GetRedisFactory().GetPool(url)
+
+	log.Info("start register module %v", conf.Conf.DB.SQL)
+
 	manager := basemodule.NewModuleManager()
 	manager.RegisterRunMod(modules.TimerModule())
+	appmodule := appModule.Module()
+	//add a  module  operate app
+	manager.RegisterRunMod(appmodule)
 	// module
 	for i := 0; i < len(mods); i++ {
 		manager.Register(mods[i])
@@ -116,6 +131,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	sig := <-c
 	manager.Destroy()
 	app.OnDestroy()
+
 	log.Info("mqant closing down (signal: %v)", sig)
 
 	return nil
@@ -187,6 +203,7 @@ func (app *DefaultApp) OnInit(settings conf.Config) error {
 			session := basemodule.NewServerSession(moduel.Id, Type, moduel.ByteID, client)
 			app.serverList[moduel.Id] = session
 			app.byteServerList[moduel.ByteID] = session
+
 			log.Info("RPCClient create success type(%s) id(%s)", Type, moduel.Id)
 		}
 	}
@@ -291,4 +308,60 @@ func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType strin
 
 func (app *DefaultApp) GetSqlEngine() *xorm.Engine {
 	return app.Engine
+}
+
+func (app *DefaultApp) GetRedis() *redis.Pool {
+	return app.redisPool
+}
+
+func (app *DefaultApp) VerifyUserID(sessionId string) (userID string) {
+	redis := app.redisPool.Get()
+	reply, err := redis.Do("EXISTS", base.TOKEN_PERFIX+sessionId)
+	if err == nil && reply.(bool) {
+		reply, _ = redis.Do("GET", base.TOKEN_PERFIX+sessionId)
+		userID = reply.(string)
+		return
+	}
+	reply, err = redis.Do("EXISTS", base.SESSION_PERFIX+sessionId)
+	if err == nil && reply.(bool) {
+		reply, _ = redis.Do("GET", base.SESSION_PERFIX+sessionId)
+		userID = reply.(string)
+		return
+	}
+	return ""
+}
+
+func (app *DefaultApp) VerifyUser(sessionId string) (user *base.BaseUser) {
+
+	var exit bool
+	user, exit = app.users[sessionId]
+	if exit {
+		return
+	}
+	uid := app.VerifyUserID(sessionId)
+	if uid == "" {
+		return nil
+	}
+	user = &base.BaseUser{
+		UserID: uid,
+	}
+	result, err := app.Engine.Get(user)
+	if err != nil {
+		panic(err)
+	}
+	if !result {
+		return nil
+	}
+	app.users[sessionId] = user
+	return
+}
+
+func (app *DefaultApp) OnUserLogin(sessionId string) {
+	app.VerifyUser(sessionId)
+}
+
+func (app *DefaultApp) OnUserLogOut(sessionId string) {
+	delete(app.users, sessionId)
+	redis := app.redisPool.Get()
+	redis.Do("DEL", base.SESSION_PERFIX+sessionId)
 }

@@ -27,7 +27,7 @@ var (
 )
 
 type Authenticator interface {
-	Authenticate(id string, cred interface{}) error
+	Authenticate(name string, password string, clientId string) error
 }
 
 func Register(name string, provider Authenticator) {
@@ -59,6 +59,6 @@ func NewManager(providerName string) (*Manager, error) {
 	return &Manager{p: p}, nil
 }
 
-func (this *Manager) Authenticate(id string, cred interface{}) error {
-	return this.p.Authenticate(id, cred)
+func (this *Manager) Authenticate(id string, cred string, clientID string) error {
+	return this.p.Authenticate(id, cred, clientID)
 }

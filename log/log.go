@@ -12,19 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 package log
+
 import (
 	"github.com/GodSlave/MyGoServer/logger/ozzo-log"
 )
+
 var mqlog *log.Logger
 var defaultLogger *log.Logger
+
 func Init(debug bool, ProcessID string, Logdir string) {
 	mqlog = NewMqantLog(debug, ProcessID, Logdir)
 }
 
-func Log()(*log.Logger){
-	if mqlog==nil{
-		if defaultLogger==nil{
-			defaultLogger=NewDefaultLogger()
+func Log() (*log.Logger) {
+	if mqlog == nil {
+		if defaultLogger == nil {
+			defaultLogger = NewMqantLog(true, "test", "./")
 		}
 		return defaultLogger
 	}

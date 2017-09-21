@@ -50,7 +50,8 @@ type Config struct {
 
 type DB struct {
 	DBtype string
-	Url    string
+	SQL    string
+	Redis  string
 }
 
 type Rpc struct {

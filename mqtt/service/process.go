@@ -66,11 +66,11 @@ func (this *Service) processor() {
 			return
 		}
 
-		//log.Debug("(%s) Received: %s", this.cid(), msg)
+		//log.Debug("(%s) Received: %v", this.cid(), msg)
 
 		this.inStat.increment(int64(n))
 
-		// 5. Process the read message
+		// 5. OnNewMessage the read message
 		err = this.processIncoming(msg)
 		if err != nil {
 			if err != errDisconnect {
@@ -229,7 +229,7 @@ func (this *Service) processAcked(ackq *sessions.Ackqueue) {
 			}
 
 		case message.PUBACK, message.PUBCOMP, message.SUBACK, message.UNSUBACK, message.PINGRESP:
-			log.Debug("process/processAcked: %s", ack)
+			 //log.Debug("process/processAcked: %s", ack)
 			// If ack is PUBACK, that means the QoS 1 message sent by this Service got
 			// ack'ed. There's nothing to do other than calling onComplete() below.
 
@@ -313,16 +313,15 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 
 	for i, t := range topics {
 
-		if t[0] == 'i' || t[0] == 'f' {
-			//TODO verify user
-			if len(this.sess.AesKey) == 0 {
-				log.Info("subscribe with error topic id %s", t)
-				retcodes = append(retcodes, 0x80)
-			} else {
-				retcodes = append(retcodes, message.QosAtLeastOnce)
-			}
-		} else if t[0] == 's' {
-
+		//if t[0] == 'i' || t[0] == 'f' {
+		//	//TODO verify user
+		//	if len(this.sess.AesKey) == 0 {
+		//		log.Info("subscribe with error topic id %s", t)
+		//		retcodes = append(retcodes, 0x80)
+		//	}
+		//} else
+		//
+		if t[0] == 's' {
 			defer func() {
 				if err == nil {
 					pubMessage := message.NewPublishMessage()
@@ -330,6 +329,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 					randBytes := make([]byte, 32)
 					uuid.RandBytes(randBytes)
 					pubMessage.SetPayload(randBytes)
+					log.Debug(pubMessage.String())
 					err := this.PublishMsg(pubMessage)
 					if err == nil {
 						md5result := base.GetMd5T([]byte(this.sess.Id), randBytes)
@@ -342,9 +342,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 				} else {
 					log.Error(" send random code error %s", err.Error())
 				}
-
 			}()
-
 		}
 
 		rqos, err := this.topicsMgr.Subscribe(t, qos[i], &this.onpub)
@@ -357,6 +355,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 		// subscription to stop, just let it go.
 		this.topicsMgr.Retained(t, &this.rmsgs)
 		log.Debug("(%s) topic = %s, retained count = %d", this.cid(), string(t), len(this.rmsgs))
+
 	}
 
 	if err := resp.AddReturnCodes(retcodes); err != nil {
@@ -411,11 +410,8 @@ func (this *Service) onPublish(msg *message.PublishMessage) error {
 
 	msg.SetRetain(false)
 	topic := msg.Topic()
-	log.Info("a message come %s %s", msg.Topic(), msg.Payload())
-	if topic[0] == 'i' || topic[0] == 'f' {
-		if this.msgProcess != nil {
-			this.msgProcess.Process(msg, this.sess)
-		}
+	if (topic[0] == 'i' || topic[0] == 'f' ) && this.msgProcess != nil {
+		this.msgProcess.OnNewMessage(msg, this.sess)
 	} else {
 		//log.Debug("(%s) Publishing to topic %q and %d subscribers", this.cid(), string(msg.Topic()), len(this.subs))
 		for _, s := range this.subs {

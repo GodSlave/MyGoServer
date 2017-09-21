@@ -191,7 +191,7 @@ func (this *Service) start() error {
 // calls this, and closes the buffers, somehow it causes buffer.go:476 to panid.
 func (this *Service) stop() {
 	defer func() {
-		this.msgProcess.DisConnect(this.sess)
+		this.msgProcess.OnDisConnect(this.sess)
 		// Let's recover from panic
 		if r := recover(); r != nil {
 			log.Error("(%s) Recovering from panic: %v", this.cid(), r)

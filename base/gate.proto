@@ -1,0 +1,13 @@
+syntax = "proto3";
+package gate;
+option go_package = "../module/gate";
+message allResponse {
+
+    //结果
+    bytes result = 1;
+    //错误结果 如果为nil表示请求正确
+    string msg = 2;
+    //错误代码 200 means right
+    int32 state = 3;
+
+}
