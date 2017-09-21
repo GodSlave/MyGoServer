@@ -49,9 +49,10 @@ type Config struct {
 }
 
 type DB struct {
-	DBtype string
-	SQL    string
-	Redis  string
+	DBtype      string
+	SQL         string
+	Redis       string
+	Redis_Queue string
 }
 
 type Rpc struct {

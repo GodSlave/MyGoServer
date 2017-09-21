@@ -205,15 +205,6 @@ func (s *RPCServer) on_call_handle(calls <-chan mqrpc.CallInfo, callbacks chan<-
 					} else {
 						log.Warning("timeout: This is Call", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000000)
 					}
-					resultInfo := rpcpb.NewResultInfo(
-						callInfo.RpcInfo.Cid,
-						base.ErrRequestTimeout.Desc,
-						base.ErrRequestTimeout.ErrorCode,
-						argsutil.BYTES,
-						nil,
-					)
-					callInfo.Result = *resultInfo
-					callbacks <- callInfo
 				} else {
 					s.runFunc(callInfo, callbacks)
 				}

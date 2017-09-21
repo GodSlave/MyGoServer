@@ -22,7 +22,7 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils"
-	"github.com/GodSlave/MyGoServer/module/app"
+	"encoding/json"
 )
 
 func NewApp() module.App {
@@ -71,6 +71,7 @@ type DefaultApp struct {
 	Engine            *xorm.Engine
 	redisPool         *redis.Pool
 	users             map[string]*base.BaseUser
+	psc               *redis.PubSubConn
 }
 
 func (app *DefaultApp) Run(mods ...module.Module) error {
@@ -108,17 +109,22 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	sql.InitDB()
 	sql.CheckMigrate()
 	app.Engine = sql.Engine
+	defer app.Engine.Close()
 
 	url := app.GetSettings().DB.Redis
 	app.redisPool = utils.GetRedisFactory().GetPool(url)
+	defer app.redisPool.Close()
+
+	psc := redis.PubSubConn{Conn: app.redisPool.Get()}
+	psc.Subscribe(app.GetSettings().DB.Redis_Queue)
+	app.psc = &psc
+	go app.handAppMessage()
 
 	log.Info("start register module %v", conf.Conf.DB.SQL)
 
 	manager := basemodule.NewModuleManager()
 	manager.RegisterRunMod(modules.TimerModule())
-	appmodule := appModule.Module()
-	//add a  module  operate app
-	manager.RegisterRunMod(appmodule)
+
 	// module
 	for i := 0; i < len(mods); i++ {
 		manager.Register(mods[i])
@@ -317,13 +323,13 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 func (app *DefaultApp) VerifyUserID(sessionId string) (userID string) {
 	redis := app.redisPool.Get()
 	reply, err := redis.Do("EXISTS", base.TOKEN_PERFIX+sessionId)
-	if err == nil && reply.(bool) {
+	if err == nil && reply.(int64) > 0 {
 		reply, _ = redis.Do("GET", base.TOKEN_PERFIX+sessionId)
 		userID = reply.(string)
 		return
 	}
 	reply, err = redis.Do("EXISTS", base.SESSION_PERFIX+sessionId)
-	if err == nil && reply.(bool) {
+	if err == nil && reply.(int64) > 0 {
 		reply, _ = redis.Do("GET", base.SESSION_PERFIX+sessionId)
 		userID = reply.(string)
 		return
@@ -360,8 +366,53 @@ func (app *DefaultApp) OnUserLogin(sessionId string) {
 	app.VerifyUser(sessionId)
 }
 
+type ProcessMessageContent struct {
+	Method string
+	Body   interface{}
+}
+
+const LOGOUT_MESSAGE = "OnUserLogOut"
+
 func (app *DefaultApp) OnUserLogOut(sessionId string) {
 	delete(app.users, sessionId)
 	redis := app.redisPool.Get()
 	redis.Do("DEL", base.SESSION_PERFIX+sessionId)
+	message := ProcessMessageContent{
+		Method: LOGOUT_MESSAGE,
+		Body:   sessionId,
+	}
+	msgData, err := json.Marshal(message)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	redis.Do("PUBLISH", app.settings.DB.Redis_Queue, msgData)
+}
+
+func (app *DefaultApp) handAppMessage() {
+
+	for {
+		switch v := app.psc.Receive().(type) {
+		case redis.Message:
+			appMsg := &ProcessMessageContent{}
+			err := json.Unmarshal(v.Data, appMsg)
+			if err != nil {
+				log.Error(err.Error())
+			}
+			switch appMsg.Method {
+			case LOGOUT_MESSAGE:
+				sessID := appMsg.Body.(string)
+				delete(app.users, sessID)
+			}
+		case redis.PMessage:
+		case redis.Subscription:
+			log.Info("%s: %s %d\n", v.Channel, v.Kind, v.Count)
+		case error:
+			log.Error("on_request_handle", v.Error())
+			return
+		default:
+
+		}
+
+	}
 }

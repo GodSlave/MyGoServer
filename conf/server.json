@@ -24,7 +24,7 @@
         //这个模块所属进程,非常重要,进程会根据该参数来判断是否需要运行该模块 [development]为默认值代表开发环境
         "ProcessID": "development",
         "Settings": {
-          "TCPAddr": "tcp://0.0.0.0:1883"
+          "TCPAddr": "tcp://0.0.0.0:1884"
         }
       }
     ],
@@ -48,12 +48,13 @@
   },
   "Rpc": {
     // 远程访问最后期限值 单位秒 这个值指定了在客户端可以等待服务端多长时间来应答
-    "RpcExpired": 300
+    "RpcExpired": 3
   },
   "DB": {
     "DBtype": "mysql",
     "SQL": "root:woaini123@tcp(172.16.6.196:3306)/gameserver?charset=utf8",
-    "Redis": "redis://172.16.6.196:6379/1"
+    "Redis": "redis://172.16.6.196:6379/1",
+    "Redis_Queue": "APP"
   },
   //TODO must modify this value in product env
   "PrivateKey": "bb7b5ccf-9692-4906-9359-f7b168b7f9ddd82e9f3f-cbfb-4831-b55c-44e1c887c039924da77e-0e8b-44ad-a5ff-079fdae24f1d",

@@ -26,6 +26,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/GodSlave/MyGoServer/rpc/util"
 	"github.com/GodSlave/MyGoServer/rpc/pb"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type AMQPClient struct {
@@ -114,7 +115,7 @@ func (c *AMQPClient) Call(callInfo mqrpc.CallInfo, callback chan rpcpb.ResultInf
 	if c.callinfos == nil {
 		return fmt.Errorf("AMQPClient is closed")
 	}
-	callInfo.RpcInfo.ReplyTo=c.Consumer.callback_queue
+	callInfo.RpcInfo.ReplyTo = c.Consumer.callback_queue
 	var correlation_id = callInfo.RpcInfo.Cid
 
 	clinetCallInfo := &ClinetCallInfo{
@@ -131,8 +132,8 @@ func (c *AMQPClient) Call(callInfo mqrpc.CallInfo, callback chan rpcpb.ResultInf
 	if err = c.Consumer.channel.Publish(
 		c.Consumer.info.Exchange,   // publish to an exchange
 		c.Consumer.info.BindingKey, // routing to 0 or more queues
-		false, // mandatory
-		false, // immediate
+		false,                      // mandatory
+		false,                      // immediate
 		amqp.Publishing{
 			Headers:         amqp.Table{"reply_to": c.Consumer.callback_queue},
 			ContentType:     "text/plain",
@@ -162,8 +163,8 @@ func (c *AMQPClient) CallNR(callInfo mqrpc.CallInfo) error {
 	if err = c.Consumer.channel.Publish(
 		c.Consumer.info.Exchange,   // publish to an exchange
 		c.Consumer.info.BindingKey, // routing to 0 or more queues
-		false, // mandatory
-		false, // immediate
+		false,                      // mandatory
+		false,                      // immediate
 		amqp.Publishing{
 			Headers:         amqp.Table{"reply_to": c.Consumer.callback_queue},
 			ContentType:     "text/plain",
@@ -189,9 +190,10 @@ func (c *AMQPClient) on_timeout_handle(args interface{}) {
 				if clinetCallInfo.timeout < (time.Now().UnixNano() / 1000000) {
 					//已经超时了
 					resultInfo := &rpcpb.ResultInfo{
-						Result: nil,
-						Error:  "timeout: This is Call",
-						ResultType:argsutil.NULL,
+						Result:     nil,
+						Error:      base.ErrRequestTimeout.Desc,
+						ErrorCode:  base.ErrRequestTimeout.ErrorCode,
+						ResultType: argsutil.NULL,
 					}
 					//发送一个超时的消息
 					clinetCallInfo.call <- *resultInfo
@@ -206,9 +208,6 @@ func (c *AMQPClient) on_timeout_handle(args interface{}) {
 		timer.SetTimer(1, c.on_timeout_handle, nil)
 	}
 }
-
-
-
 
 /**
 接收应答信息
@@ -227,7 +226,7 @@ func (c *AMQPClient) on_response_handle(deliveries <-chan amqp.Delivery, done ch
 				//	d.Body,
 				//)
 				d.Ack(false)
-				resultInfo,err := c.UnmarshalResult(d.Body)
+				resultInfo, err := c.UnmarshalResult(d.Body)
 				if err != nil {
 					log.Error("Unmarshal faild", err)
 				} else {

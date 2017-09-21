@@ -26,6 +26,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/GodSlave/MyGoServer/rpc/util"
 	"github.com/garyburd/redigo/redis"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type RedisClient struct {
@@ -155,7 +156,8 @@ func (c *RedisClient) on_timeout_handle(args interface{}) {
 					//已经超时了
 					resultInfo := &rpcpb.ResultInfo{
 						Result: nil,
-						Error:  "timeout: This is Call",
+						Error:  base.ErrRequestTimeout.Desc,
+						ErrorCode: base.ErrRequestTimeout.ErrorCode,
 						ResultType:argsutil.NULL,
 					}
 					//发送一个超时的消息

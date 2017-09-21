@@ -5,7 +5,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/conf"
-	"github.com/GodSlave/MyGoServer/utils"
 	"github.com/go-xorm/xorm"
 	"crypto/md5"
 	"encoding/hex"
