@@ -40,7 +40,6 @@ func LoadConfig(Path string) {
 type Config struct {
 	Rpc        Rpc
 	Module     map[string][]*ModuleSettings
-	Mqtt       Mqtt
 	Master     Master
 	Debug      bool
 	DB         DB
@@ -83,12 +82,6 @@ type ModuleSettings struct {
 	Redis     *Redis
 }
 
-type Mqtt struct {
-	//WirteLoopChanNum int // Should > 1 	    // 最大写入包队列缓存
-	//ReadPackLoop     int // 最大读取包队列缓存
-	//ReadTimeout      int // 读取超时
-	//WriteTimeout     int // 写入超时
-}
 
 type SSH struct {
 	Host     string
