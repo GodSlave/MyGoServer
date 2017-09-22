@@ -32,7 +32,7 @@
       {
         "Id": "User001",
         "ByteId": 2,
-        "ProcessID": "worker1",
+        "ProcessID": "development",
         "Redis": {
           "Uri": "redis://password:zhanglinderedis1234@127.0.0.1:6379/2",
           "Queue": "User"
