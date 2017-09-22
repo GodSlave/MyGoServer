@@ -81,6 +81,11 @@ byte2 对应 Func编号
  这两个返回都可以为 空  
       
 
+## 如何开始
+ 1. 配置conf目录下server.json文件  
+ 2. go build main.go  & ./main  
+ 3. 进入test目录 找到 testJson 方法 开始执行
+
 ## 模块列表
 | module | module | 
 | -------- | -------- |
