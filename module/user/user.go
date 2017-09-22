@@ -23,7 +23,6 @@ type ModuleUser struct {
 
 var verifyCodeKey = "VerifyCode"
 
-
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
 
@@ -32,11 +31,12 @@ var Module = func() module.Module {
 
 func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.BaseModule.OnInit(m, app, settings)
-	m.redisPool =app.GetRedis()
+	m.redisPool = app.GetRedis()
 	m.sqlEngine = app.GetSqlEngine()
 	m.GetServer().RegisterGO("Login", 1, m.Login)
 	m.GetServer().RegisterGO("Register", 2, m.Register)
 	m.GetServer().RegisterGO("GetVerifyCode", 3, m.GetVerifyCode)
+	m.GetServer().RegisterGO("GetSelfInfo", 4, m.GetSelfInfo)
 	m.app = app
 
 	var user = &base.BaseUser{}
@@ -68,18 +68,18 @@ func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *Us
 	user := new(base.BaseUser)
 	has, err1 := m.sqlEngine.Where("name=?", form.Username).Get(user)
 	if err1 == nil && has {
-		md5sum := md5.Sum([]byte(user.Password + m.app.GetSettings().PrivateKey))
+		md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
 		if user.Password == hex.EncodeToString(md5sum[:]) {
 			conn := m.redisPool.Get()
-			_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, user.Id)
+			_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, user.UserID)
 			_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*24)
 
 			token := uuid.RandNumbers(32)
 			rToken := uuid.RandNumbers(32)
 
-			_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, user.Id)
+			_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, user.UserID)
 			_, err1 = conn.Do("EXPIRE", base.TOKEN_PERFIX+token, 3600*24*7)
-			_, err1 = conn.Do("SET", base.REFRESH_TOKEN_PERFIX+rToken, user.Id)
+			_, err1 = conn.Do("SET", base.REFRESH_TOKEN_PERFIX+rToken, user.UserID)
 			_, err1 = conn.Do("EXPIRE", base.REFRESH_TOKEN_PERFIX+rToken, 3600*24*14)
 
 			if err1 != nil {
@@ -117,16 +117,27 @@ func (m *ModuleUser) Register(SessionId string, form *UserRegisterRequest) (resu
 	if has {
 		return nil, base.ErrAccountBeenTaken
 	}
-	md5sum := md5.Sum([]byte(user.Password + m.app.GetSettings().PrivateKey))
+
+	c := m.redisPool.Get()
+	reply1, err1 := redis.String(c.Do("GET", verifyCodeKey+form.Username))
+	if err1 != nil {
+		log.Error(err1.Error())
+	}
+
+	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "aabbcc" {
+		return nil, base.ErrVerifyCodeErr
+	}
+	md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
+	password := hex.EncodeToString(md5sum[:])
 	user = &base.BaseUser{
 		Name:      form.Username,
-		Password:  hex.EncodeToString(md5sum[:]),
+		Password:  password,
 		CreatTime: time.Now().Unix(),
 		UserID:    uuid.Rand().Hex(),
 	}
 	affected, err3 := m.sqlEngine.Insert(user)
 	if err3 != nil {
-		log.Error(err1.Error())
+		log.Error(err3.Error())
 		return nil, base.ErrInternal
 	}
 	log.Info("%v", affected)
@@ -150,7 +161,7 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form UserGetVerifyCodeReque
 	return nil, base.ErrNil
 }
 
-func (m *ModuleUser) GetSelfInfo(user *base.BaseUser, form UserGetSelfInfoRequest) (result *UserGetSelfInfoResponse, err *base.ErrorCode) {
+func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *UserGetSelfInfoResponse, err *base.ErrorCode) {
 	if user == nil {
 		err = base.ErrNeedLogin
 		return

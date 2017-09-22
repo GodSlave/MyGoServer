@@ -44,11 +44,13 @@ func TestJson(t *testing.T) {
 	checkChan := make(chan *gate.AllResponse)
 	subI(c, checkChan)
 	time.Sleep(1 * time.Second)
-	user := &user.BaseUser{
+	user := &base.BaseUser{
 		Name:     "zhanglin",
-		Password: "woaini123",
+		Password: "woaini1232",
 	}
+	//registerI(c, user, checkChan)
 	loginI(c, user, checkChan)
+	getSelfInfoI(c, checkChan)
 
 }
 
@@ -119,7 +121,7 @@ func subI(client *service.Client, checkChan chan *gate.AllResponse) error {
 	return nil
 }
 
-func loginI(client *service.Client, user1 *user.BaseUser, callback chan *gate.AllResponse) (err error) {
+func loginI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
 	fmt.Println("start login")
 	login := &user.UserLoginRequest{
 		Username: user1.Name,
@@ -128,8 +130,30 @@ func loginI(client *service.Client, user1 *user.BaseUser, callback chan *gate.Al
 	err = client.Publish(buildIPublishMessage(client, login, "User", "Login"), nil)
 	var allrespon *gate.AllResponse
 	allrespon = <-callback
-	fmt.Print(allrespon)
-	fmt.Println(allrespon.State)
+	fmt.Println("login Response", allrespon.State)
+	return err
+}
+
+func registerI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
+	fmt.Println("start register")
+	login := &user.UserRegisterRequest{
+		Username:   user1.Name,
+		Password:   user1.Password,
+		VerifyCode: "aabbcc",
+	}
+	err = client.Publish(buildIPublishMessage(client, login, "User", "Register"), nil)
+	var allrespon *gate.AllResponse
+	allrespon = <-callback
+	fmt.Println("register Response", allrespon.State)
+	return err
+}
+
+func getSelfInfoI(client *service.Client, callback chan *gate.AllResponse) (err error) {
+	fmt.Println("start register")
+	err = client.Publish(buildIPublishMessage(client, nil, "User", "GetSelfInfo"), nil)
+	var allrespon *gate.AllResponse
+	allrespon = <-callback
+	fmt.Println("getSelfInfoI Response", allrespon.State)
 	return err
 }
 

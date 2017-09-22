@@ -320,17 +320,23 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 		if userIndex >= 0 {
 			param1type := funcType.In(userIndex)
 			//TODO map session to real user id
+			sessionID := callInfo.RpcInfo.SessionId
 			if param1type.Kind() == reflect.String {
-				in[userIndex] = reflect.ValueOf(string(params[userIndex]))
-
-
-			}else{
-
+				userID := s.app.VerifyUserID(sessionID)
+				if userID != "" {
+					in[userIndex] = reflect.ValueOf(userID)
+				} else {
+					in[userIndex] = reflect.ValueOf(sessionID)
+				}
+			} else {
+				user := s.app.VerifyUser(sessionID)
+				if (user != nil) {
+					in[userIndex] = reflect.ValueOf(user)
+				}
 			}
-
 		}
 
-		if (paramsIndex >= 0) {
+		if paramsIndex >= 0 {
 			paramType := funcType.In(paramsIndex)
 			log.Info(paramType.Name())
 			v := reflect.New(paramType.Elem()).Interface()
@@ -378,25 +384,29 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 			}
 
 			if k == 1 {
-				switch value.Kind() {
-				case reflect.String:
-					errorInfo := value.String()
-					if errorInfo != "" {
-						errorCode = base.NewError(500, errorInfo)
-					}
-				default:
-					errorCode1, err := value.Interface().(*base.ErrorCode)
-					if err {
-						errorCode = errorCode1
+				if value.IsNil() {
+					errorCode = base.ErrNil
+				} else {
+					switch value.Kind() {
+					case reflect.Invalid:
+						errorCode = base.ErrNil
+					case reflect.String:
+						errorInfo := value.String()
+						if errorInfo != "" {
+							errorCode = base.NewError(500, errorInfo)
+						}
+					default:
+						errorCode1, err := value.Interface().(*base.ErrorCode)
+						if err {
+							errorCode = errorCode1
+						}
 					}
 				}
+
 			}
 		}
 
 		if len(out) < 2 {
-			if span != nil {
-				span.LogEventWithPayload("Error", "The number of prepare is not adapted.")
-			}
 			_errorCallback(callInfo.RpcInfo.Cid, base.ErrInternal)
 			return
 		}

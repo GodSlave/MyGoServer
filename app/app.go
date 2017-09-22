@@ -321,17 +321,16 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 }
 
 func (app *DefaultApp) VerifyUserID(sessionId string) (userID string) {
-	redis := app.redisPool.Get()
-	reply, err := redis.Do("EXISTS", base.TOKEN_PERFIX+sessionId)
-	if err == nil && reply.(int64) > 0 {
-		reply, _ = redis.Do("GET", base.TOKEN_PERFIX+sessionId)
-		userID = reply.(string)
+	c := app.redisPool.Get()
+	reply, err := redis.Bool(c.Do("EXISTS", base.TOKEN_PERFIX+sessionId))
+	if err == nil && reply {
+
+		userID, _ = redis.String(c.Do("GET", base.TOKEN_PERFIX+sessionId))
 		return
 	}
-	reply, err = redis.Do("EXISTS", base.SESSION_PERFIX+sessionId)
-	if err == nil && reply.(int64) > 0 {
-		reply, _ = redis.Do("GET", base.SESSION_PERFIX+sessionId)
-		userID = reply.(string)
+	reply, err = redis.Bool(c.Do("EXISTS", base.SESSION_PERFIX+sessionId))
+	if err == nil && reply {
+		userID, _ = redis.String(c.Do("GET", base.SESSION_PERFIX+sessionId))
 		return
 	}
 	return ""

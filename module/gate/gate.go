@@ -154,6 +154,10 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 			toResult(topic, nil, base.ErrNotFound, packetId)
 			return false
 		}
+		if string(arg1) == "null" {
+			arg1 = nil
+		}
+
 		result, e := serverSession.CallArgs(msgContent.Func, sess.Id, arg1)
 		toResult(topic, result, e, packetId)
 	} else {

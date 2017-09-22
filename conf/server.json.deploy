@@ -57,7 +57,8 @@
   "DB": {
     "DBtype": "mysql",
     "SQL": "root:woaini123@/gameserver?charset=utf8",
-    "Redis": "redis://password:zhanglinderedis1234@127.0.0.1:6379/1"
+    "Redis": "redis://password:zhanglinderedis1234@127.0.0.1:6379/1",
+    "Redis_Queue": "APP"
   },
   //TODO must modify this value in product env
   "PrivateKey": "bb7b5ccf-9692-4906-9359-f7b168b7f9ddd82e9f3f-cbfb-4831-b55c-44e1c887c039924da77e-0e8b-44ad-a5ff-079fdae24f1d",

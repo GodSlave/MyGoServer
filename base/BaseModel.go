@@ -8,7 +8,7 @@ var REFRESH_TOKEN_PERFIX = "rToken"
 type BaseUser struct {
 	// @inject_tag: xorm:"unique index notnull"
 	Name      string `xorm:"unique index notnull"`
-	Phone     string `xorm:"unique index"`
+	Phone     string `xorm:"index"`
 	Password  string `xorm:"notnull"`
 	UserID    string `xorm:"unique index notnull"`
 	Id        int64
