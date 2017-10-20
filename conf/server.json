@@ -45,7 +45,8 @@
     "DBtype": "mysql",
     "SQL": "root:woaini123@tcp(172.16.6.196:3306)/gameserver?charset=utf8",
     "Redis": "redis://172.16.6.196:6379/1",
-    "Redis_Queue": "APP" //多个进程间同步app信息
+    //多个进程间同步app信息
+    "Redis_Queue": "APP"
   },
   //用于md5加盐
   "PrivateKey": "bb7b5ccf-9692-4906-9359-f7b168b7f9ddd82e9f3f-cbfb-4831-b55c-44e1c887c039924da77e-0e8b-44ad-a5ff-079fdae24f1d",

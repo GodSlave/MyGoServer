@@ -2,3 +2,6 @@
 *bin/
 *pkg/
 *.deploy
+*.exe
+Unnamed
+main
