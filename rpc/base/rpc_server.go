@@ -338,7 +338,7 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 
 		if paramsIndex >= 0 {
 			paramType := funcType.In(paramsIndex)
-			log.Info(paramType.Name())
+			log.Info("typeName: " + paramType.Name())
 			v := reflect.New(paramType.Elem()).Interface()
 			var err error
 			if callInfo.RpcInfo.Fn != "" {
