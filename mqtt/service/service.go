@@ -221,8 +221,6 @@ func (this *Service) stop() {
 	// Wait for all the goroutines to stop.
 	this.wgStopped.Wait()
 
-	log.Debug("(%s) Received %d bytes in %d messages.", this.cid(), this.inStat.bytes, this.inStat.msgs)
-	log.Debug("(%s) Sent %d bytes in %d messages.", this.cid(), this.outStat.bytes, this.outStat.msgs)
 
 	// Unsubscribe from all the topics for this client, only for the server side though
 	if !this.client && this.sess != nil {

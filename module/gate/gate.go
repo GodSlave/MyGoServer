@@ -224,7 +224,6 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 	}
 
 	result, e := serverSession.CallByteArgs(payload[1], sess.Id, payload[2:])
-	log.Debug("%v", result)
 	toResult(topic, result, payload[0:2], e, packetId)
 	return true
 }
@@ -232,6 +231,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessions.Session) error {
 	publish := message.NewPublishMessage()
 	publish.SetTopic(topic)
+	log.Debug("%v", body)
 	if (m.GetApp().GetSettings().Secret) {
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
@@ -245,7 +245,6 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessio
 	publish.SetPayload(body)
 	publish.SetQoS(1)
 	publish.SetPacketId(packetId)
-	log.Debug(publish.String())
 	return m.svr.PublishToClient(publish, sess.Id, nil)
 }
 

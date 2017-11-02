@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/gogo/protobuf/proto"
+	serverbase "github.com/GodSlave/MyGoServer/base"
 )
 
 type RPCServer struct {
@@ -273,19 +274,22 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 
 		defer func() {
 			if r := recover(); r != nil {
-				var rn = ""
+				var rn *serverbase.ErrorCode
 				switch r.(type) {
-
+				case *serverbase.ErrorCode:
+					rn = r.(*serverbase.ErrorCode)
 				case string:
-					rn = r.(string)
+					str := r.(string)
+					rn = base.NewError(500, str)
 				case error:
-					rn = r.(error).Error()
+					str := r.(error).Error()
+					rn = base.NewError(500, str)
 				}
 				buf := make([]byte, 1024)
 				l := runtime.Stack(buf, false)
 				errstr := string(buf[:l])
-				log.Error("%s rpc func(%s) error %s\n ----Stack----\n%s", s.module.GetType(), callInfo.RpcInfo.Fn, rn, errstr)
-				_errorCallback(callInfo.RpcInfo.Cid, base.NewError(500, rn))
+				log.Error("%s rpc func(%s) error %s\n ----Stack----\n%s", s.module.GetType(), callInfo.RpcInfo.Fn, rn.Desc, errstr)
+				_errorCallback(callInfo.RpcInfo.Cid, rn)
 			}
 
 			if span != nil {
@@ -332,13 +336,14 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				user := s.app.VerifyUser(sessionID)
 				if (user != nil) {
 					in[userIndex] = reflect.ValueOf(user)
+				} else {
+					_errorCallback(callInfo.RpcInfo.Cid, base.ErrNeedLogin)
+					return
 				}
 			}
 		}
-
 		if paramsIndex >= 0 {
 			paramType := funcType.In(paramsIndex)
-			log.Info("typeName: " + paramType.Name())
 			v := reflect.New(paramType.Elem()).Interface()
 			var err error
 			if callInfo.RpcInfo.Fn != "" {
@@ -346,7 +351,6 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 			} else {
 				err = proto.Unmarshal(params, v.(proto.Message))
 			}
-
 			if err != nil {
 				log.Error(err.Error())
 				panic(err)
@@ -361,7 +365,6 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				return
 			}
 		}
-
 		out := f.Call(in)
 		errorCode := base.ErrNil
 		var result []byte

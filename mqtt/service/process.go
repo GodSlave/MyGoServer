@@ -329,7 +329,6 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 					randBytes := make([]byte, 32)
 					uuid.RandBytes(randBytes)
 					pubMessage.SetPayload(randBytes)
-					log.Debug(pubMessage.String())
 					err := this.PublishMsg(pubMessage)
 					if err == nil {
 						md5result := base.GetMd5T([]byte(this.sess.Id), randBytes)
