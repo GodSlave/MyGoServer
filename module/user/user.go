@@ -16,9 +16,11 @@ import (
 
 type ModuleUser struct {
 	basemodule.BaseModule
-	redisPool *redis.Pool
-	sqlEngine *xorm.Engine
-	app       module.App
+	redisPool        *redis.Pool
+	sqlEngine        *xorm.Engine
+	app              module.App
+	loginCallBack    LoginCallBack
+	registerCallBack RegisterCallBack
 }
 
 var verifyCodeKey = "VerifyCode"
@@ -64,6 +66,21 @@ func (m *ModuleUser) OnDestroy() {
 	m.GetServer().OnDestroy()
 }
 
+type LoginCallBack interface {
+	onUserLogin(user *base.BaseUser)
+}
+type RegisterCallBack interface {
+	onUserRegister(user *base.BaseUser)
+}
+
+func (m *ModuleUser) SetLoginCallBack(loginCallback *LoginCallBack) {
+	m.loginCallBack = loginCallback
+}
+
+func (m *ModuleUser) setRegisterCallBack(back *RegisterCallBack) {
+	m.registerCallBack = back
+}
+
 func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *UserLoginResponse, err *base.ErrorCode) {
 	user := new(base.BaseUser)
 	has, err1 := m.sqlEngine.Where("name=?", form.Username).Get(user)
@@ -95,7 +112,9 @@ func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *Us
 					ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
 				},
 			}
-
+			if m.loginCallBack != nil {
+				m.loginCallBack.onUserLogin(user)
+			}
 			return loginReq, base.ErrNil
 		}
 	}
@@ -141,6 +160,10 @@ func (m *ModuleUser) Register(SessionId string, form *UserRegisterRequest) (resu
 		return nil, base.ErrInternal
 	}
 	log.Info("%v", affected)
+	if m.registerCallBack != nil {
+		m.registerCallBack.onUserRegister(user)
+	}
+
 	return &UserRegisterResponse{
 		Result: "success",
 	}, base.ErrNil

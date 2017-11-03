@@ -78,7 +78,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	file, _ := exec.LookPath(os.Args[0])
 	ApplicationPath, _ := filepath.Abs(file)
 	ApplicationDir, _ := filepath.Split(ApplicationPath)
-	defaultPath := fmt.Sprintf("%sconf\\server.json", ApplicationDir)
+	defaultPath := fmt.Sprintf("%sconf"+string(filepath.Separator)+"server.json", ApplicationDir)
 	confPath := flag.String("conf", defaultPath, "Server configuration file path")
 	ProcessID := flag.String("pid", "development", "Server ProcessID?")
 	Logdir := flag.String("log", fmt.Sprintf("%slogs", ApplicationDir), "Log file directory?")

@@ -334,7 +334,7 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				}
 			} else {
 				user := s.app.VerifyUser(sessionID)
-				if (user != nil) {
+				if user != nil {
 					in[userIndex] = reflect.ValueOf(user)
 				} else {
 					_errorCallback(callInfo.RpcInfo.Cid, base.ErrNeedLogin)
