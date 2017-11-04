@@ -326,14 +326,14 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 			//TODO map session to real user id
 			sessionID := callInfo.RpcInfo.SessionId
 			if param1type.Kind() == reflect.String {
-				userID := s.app.VerifyUserID(sessionID)
+				userID := s.app.GetUserManager().VerifyUserID(sessionID)
 				if userID != "" {
 					in[userIndex] = reflect.ValueOf(userID)
 				} else {
 					in[userIndex] = reflect.ValueOf(sessionID)
 				}
 			} else {
-				user := s.app.VerifyUser(sessionID)
+				user := s.app.GetUserManager().VerifyUser(sessionID)
 				if user != nil {
 					in[userIndex] = reflect.ValueOf(user)
 				} else {

@@ -6,6 +6,11 @@ import (
 	"github.com/GodSlave/MyGoServer/module/user"
 )
 
+var(
+	Version string
+	Build   string
+)
+
 func main() {
 		app := app2.NewApp()
 		app.Run(gate.Module(), user.Module())

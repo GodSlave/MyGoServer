@@ -38,13 +38,14 @@ func LoadConfig(Path string) {
 }
 
 type Config struct {
-	Rpc        Rpc
-	Module     map[string][]*ModuleSettings
-	Master     Master
-	Debug      bool
-	DB         DB
-	PrivateKey string
-	Secret     bool
+	Rpc         Rpc
+	Module      map[string][]*ModuleSettings
+	Master      Master
+	Debug       bool
+	DB          DB
+	PrivateKey  string
+	Secret      bool
+	OnlineLimit int32
 }
 
 type DB struct {
@@ -81,7 +82,6 @@ type ModuleSettings struct {
 	Rabbitmq  *Rabbitmq
 	Redis     *Redis
 }
-
 
 type SSH struct {
 	Host     string

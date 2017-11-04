@@ -53,3 +53,9 @@ message UserGetSelfInfoRequest {
 message UserGetSelfInfoResponse {
     UserData userData = 1;
 }
+
+message UserLogOutRequest {
+}
+
+message UserLogOutResponse {
+}

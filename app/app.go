@@ -22,7 +22,6 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils"
-	"encoding/json"
 )
 
 func NewApp() module.App {
@@ -53,7 +52,7 @@ func NewApp() module.App {
 
 	newApp.rpcserializes = map[string]module.RPCSerialize{}
 	newApp.version = "0.0.1"
-	newApp.users = map[string]*base.BaseUser{}
+	//newApp.users = map[string]*base.BaseUser{}
 	return newApp
 }
 
@@ -70,8 +69,9 @@ type DefaultApp struct {
 	rpcserializes     map[string]module.RPCSerialize
 	Engine            *xorm.Engine
 	redisPool         *redis.Pool
-	users             map[string]*base.BaseUser
 	psc               *redis.PubSubConn
+	userManager       module.UserManager
+	gate              module.Gate
 }
 
 func (app *DefaultApp) Run(mods ...module.Module) error {
@@ -100,8 +100,10 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	app.Configure(conf.Conf)  //配置信息
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
 	log.Info("mqant %v starting up", app.version)
-
 	log.Info("start connect DB %v", conf.Conf.DB.SQL)
+
+	app.userManager = InitUserManager(app, conf.Conf.OnlineLimit)
+
 	//sql
 	sql := db.BaseSql{
 	}
@@ -118,8 +120,6 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	psc := redis.PubSubConn{Conn: app.redisPool.Get()}
 	psc.Subscribe(app.GetSettings().DB.Redis_Queue)
 	app.psc = &psc
-	go app.handAppMessage()
-
 	log.Info("start register module %v", conf.Conf.DB.SQL)
 
 	manager := basemodule.NewModuleManager()
@@ -320,98 +320,65 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 	return app.redisPool
 }
 
-func (app *DefaultApp) VerifyUserID(sessionId string) (userID string) {
-	c := app.redisPool.Get()
-	reply, err := redis.Bool(c.Do("EXISTS", base.TOKEN_PERFIX+sessionId))
-	if err == nil && reply {
-
-		userID, _ = redis.String(c.Do("GET", base.TOKEN_PERFIX+sessionId))
-		return
-	}
-	reply, err = redis.Bool(c.Do("EXISTS", base.SESSION_PERFIX+sessionId))
-	if err == nil && reply {
-		userID, _ = redis.String(c.Do("GET", base.SESSION_PERFIX+sessionId))
-		return
-	}
-	return ""
+func (app *DefaultApp) GetGate() module.Gate {
+	return app.gate
 }
 
-func (app *DefaultApp) VerifyUser(sessionId string) (user *base.BaseUser) {
-
-	var exit bool
-	user, exit = app.users[sessionId]
-	if exit {
-		return
-	}
-	uid := app.VerifyUserID(sessionId)
-	if uid == "" {
-		return nil
-	}
-	user = &base.BaseUser{
-		UserID: uid,
-	}
-	result, err := app.Engine.Get(user)
-	if err != nil {
-		panic(err)
-	}
-	if !result {
-		return nil
-	}
-	app.users[sessionId] = user
-	return
+func (app *DefaultApp) GetUser() module.UserManager {
+	return app.userManager
 }
 
-func (app *DefaultApp) OnUserLogin(sessionId string) {
-	app.VerifyUser(sessionId)
-}
-
-type ProcessMessageContent struct {
-	Method string
-	Body   interface{}
-}
-
-const LOGOUT_MESSAGE = "OnUserLogOut"
-
-func (app *DefaultApp) OnUserLogOut(sessionId string) {
-	delete(app.users, sessionId)
-	redis := app.redisPool.Get()
-	redis.Do("DEL", base.SESSION_PERFIX+sessionId)
-	message := ProcessMessageContent{
-		Method: LOGOUT_MESSAGE,
-		Body:   sessionId,
-	}
-	msgData, err := json.Marshal(message)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	redis.Do("PUBLISH", app.settings.DB.Redis_Queue, msgData)
-}
-
-func (app *DefaultApp) handAppMessage() {
-
-	for {
-		switch v := app.psc.Receive().(type) {
-		case redis.Message:
-			appMsg := &ProcessMessageContent{}
-			err := json.Unmarshal(v.Data, appMsg)
-			if err != nil {
-				log.Error(err.Error())
-			}
-			switch appMsg.Method {
-			case LOGOUT_MESSAGE:
-				sessID := appMsg.Body.(string)
-				delete(app.users, sessID)
-			}
-		case redis.PMessage:
-		case redis.Subscription:
-			log.Info("%s: %s %d\n", v.Channel, v.Kind, v.Count)
-		case error:
-			log.Error("on_request_handle", v.Error())
-			return
-		default:
-
-		}
-
-	}
-}
+//
+//func (app *DefaultApp) OnUserLogin(sessionId string) {
+//	app.VerifyUser(sessionId)
+//}
+//
+//type ProcessMessageContent struct {
+//	Method string
+//	Body   interface{}
+//}
+//
+//const LOGOUT_MESSAGE = "OnUserLogOut"
+//
+//func (app *DefaultApp) OnUserLogOut(sessionId string) {
+//	delete(app.users, sessionId)
+//	redis := app.redisPool.Get()
+//	redis.Do("DEL", base.SESSION_PERFIX+sessionId)
+//	message := ProcessMessageContent{
+//		Method: LOGOUT_MESSAGE,
+//		Body:   sessionId,
+//	}
+//	msgData, err := json.Marshal(message)
+//	if err != nil {
+//		log.Error(err.Error())
+//		return
+//	}
+//	redis.Do("PUBLISH", app.settings.DB.Redis_Queue, msgData)
+//}
+//
+//func (app *DefaultApp) handAppMessage() {
+//
+//	for {
+//		switch v := app.psc.Receive().(type) {
+//		case redis.Message:
+//			appMsg := &ProcessMessageContent{}
+//			err := json.Unmarshal(v.Data, appMsg)
+//			if err != nil {
+//				log.Error(err.Error())
+//			}
+//			switch appMsg.Method {
+//			case LOGOUT_MESSAGE:
+//				sessID := appMsg.Body.(string)
+//				delete(app.users, sessID)
+//			}
+//		case redis.PMessage:
+//		case redis.Subscription:
+//			log.Info("%s: %s %d\n", v.Channel, v.Kind, v.Count)
+//		case error:
+//			log.Error("on_request_handle", v.Error())
+//			return
+//		default:
+//
+//		}
+//	}
+//}

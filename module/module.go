@@ -65,10 +65,30 @@ type App interface {
 
 	GetRedis() *redis.Pool
 
-	OnUserLogOut(sessionId string)
-	OnUserLogin(sessionId string)
-	VerifyUser(sessionId string) (user *base.BaseUser)
-	VerifyUserID(sessionId string) (userID string)
+	GetGate() Gate
+
+	GetUserManager() UserManager
+}
+type ConnectEventCallBack func(sessionID string)
+
+type Gate interface {
+	SetOnConnectCallBack(callback ConnectEventCallBack)
+	SetOnDisConnectCallBack(callback ConnectEventCallBack)
+}
+
+type UserEventCallBack func(user *base.BaseUser)
+
+type UserManager interface {
+	OnUserLogOut(user *base.BaseUser) //用于处理用户逻辑
+	OnUserLogin(user *base.BaseUser)
+	OnUserRegister(user *base.BaseUser)
+	OnUserConnect(sessionId string)    //用户连接进来以后如果clientID是分配的token 表示是信任用户，为用户登陆
+	OnUserDisconnect(sessionId string) //当用户断开连接后,清除用户的缓存
+	VerifyUser(sessionId string) (user *base.BaseUser)  //根据sessionID 获取用户对象
+	VerifyUserID(sessionId string) (userID string)  //根据sessionID获取用户
+	SetLoginCallBack(callback UserEventCallBack)
+	SetRegisterCallBack(callback UserEventCallBack)
+	SetLogoutCallBack(callback UserEventCallBack)
 }
 
 type Module interface {

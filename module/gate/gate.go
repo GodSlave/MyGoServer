@@ -20,9 +20,11 @@ var RPC_PARAM_SESSION_TYPE = "SESSION"
 
 type Gate struct {
 	basemodule.BaseModule
-	svr       *service.Server
-	redisPool *redis.Pool
-	sqlEngine *xorm.Engine
+	svr             *service.Server
+	redisPool       *redis.Pool
+	sqlEngine       *xorm.Engine
+	connCallBack    module.ConnectEventCallBack
+	disConnCallback module.ConnectEventCallBack
 }
 
 type MsgFormat struct {
@@ -130,7 +132,6 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 	if m.GetApp().GetSettings().Secret {
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
-		log.Info("%v", payload)
 		payload, err = aesCipher.Decrypt(payload)
 		log.Info(string(payload))
 		if err != nil {
@@ -250,9 +251,27 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessio
 
 func (m *Gate) OnDisConnect(sess *sessions.Session) {
 	log.Info("%s disconnect ", sess.Id)
-	m.App.OnUserLogOut(sess.Id)
+	m.disConnCallback(sess.Id)
+	//m.App.OnUserLogOut(sess.Id)
+	if m.App.GetUserManager() != nil {
+		m.App.GetUserManager().OnUserDisconnect(sess.Id)
+	}
 }
 
 func (m *Gate) OnConnect(sess *sessions.Session) {
-	m.App.OnUserLogin(sess.Id)
+	log.Info("%s connect ", sess.Id)
+	if m.connCallBack != nil {
+		m.connCallBack(sess.Id)
+	}
+
+	if m.App.GetUserManager() != nil {
+		m.App.GetUserManager().OnUserConnect(sess.Id)
+	}
+}
+
+func (m *Gate) SetOnConnectCallBack(callback module.ConnectEventCallBack) {
+	m.connCallBack = callback
+}
+func (m *Gate) SetOnDisConnectCallBack(callback module.ConnectEventCallBack) {
+	m.disConnCallback = callback
 }

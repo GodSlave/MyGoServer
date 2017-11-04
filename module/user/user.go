@@ -16,18 +16,15 @@ import (
 
 type ModuleUser struct {
 	basemodule.BaseModule
-	redisPool        *redis.Pool
-	sqlEngine        *xorm.Engine
-	app              module.App
-	loginCallBack    LoginCallBack
-	registerCallBack RegisterCallBack
+	redisPool *redis.Pool
+	sqlEngine *xorm.Engine
+	app       module.App
 }
 
 var verifyCodeKey = "VerifyCode"
 
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
-
 	return newGate
 }
 
@@ -39,6 +36,7 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("Register", 2, m.Register)
 	m.GetServer().RegisterGO("GetVerifyCode", 3, m.GetVerifyCode)
 	m.GetServer().RegisterGO("GetSelfInfo", 4, m.GetSelfInfo)
+	m.GetServer().RegisterGO("Logout", 5, m.GetSelfInfo)
 	m.app = app
 
 	var user = &base.BaseUser{}
@@ -64,21 +62,6 @@ func (m *ModuleUser) Run(closeSig chan bool) {
 func (m *ModuleUser) OnDestroy() {
 	//一定别忘了关闭RPC
 	m.GetServer().OnDestroy()
-}
-
-type LoginCallBack interface {
-	onUserLogin(user *base.BaseUser)
-}
-type RegisterCallBack interface {
-	onUserRegister(user *base.BaseUser)
-}
-
-func (m *ModuleUser) SetLoginCallBack(loginCallback *LoginCallBack) {
-	m.loginCallBack = loginCallback
-}
-
-func (m *ModuleUser) setRegisterCallBack(back *RegisterCallBack) {
-	m.registerCallBack = back
 }
 
 func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *UserLoginResponse, err *base.ErrorCode) {
@@ -112,9 +95,7 @@ func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *Us
 					ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
 				},
 			}
-			if m.loginCallBack != nil {
-				m.loginCallBack.onUserLogin(user)
-			}
+			m.GetApp().GetUserManager().OnUserLogin(user)
 			return loginReq, base.ErrNil
 		}
 	}
@@ -160,10 +141,7 @@ func (m *ModuleUser) Register(SessionId string, form *UserRegisterRequest) (resu
 		return nil, base.ErrInternal
 	}
 	log.Info("%v", affected)
-	if m.registerCallBack != nil {
-		m.registerCallBack.onUserRegister(user)
-	}
-
+	m.app.GetUserManager().OnUserRegister(user)
 	return &UserRegisterResponse{
 		Result: "success",
 	}, base.ErrNil
@@ -196,6 +174,16 @@ func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *UserGetSelfInfoRe
 			UserID:   user.UserID,
 		},
 	}
+	return
+}
+
+func (m *ModuleUser) LogOut(user *base.BaseUser) (result *UserLoginResponse, err *base.ErrorCode) {
+	if user == nil {
+		err = base.ErrNeedLogin
+		return
+	}
+
+	m.app.GetUserManager().OnUserLogOut(user)
 
 	return
 }
