@@ -65,8 +65,6 @@ type App interface {
 
 	GetRedis() *redis.Pool
 
-	GetGate() Gate
-
 	GetUserManager() UserManager
 }
 type ConnectEventCallBack func(sessionID string)

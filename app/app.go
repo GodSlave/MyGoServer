@@ -71,7 +71,6 @@ type DefaultApp struct {
 	redisPool         *redis.Pool
 	psc               *redis.PubSubConn
 	userManager       module.UserManager
-	gate              module.Gate
 }
 
 func (app *DefaultApp) Run(mods ...module.Module) error {
@@ -209,7 +208,6 @@ func (app *DefaultApp) OnInit(settings conf.Config) error {
 			session := basemodule.NewServerSession(moduel.Id, Type, moduel.ByteID, client)
 			app.serverList[moduel.Id] = session
 			app.byteServerList[moduel.ByteID] = session
-
 			log.Info("RPCClient create success type(%s) id(%s)", Type, moduel.Id)
 		}
 	}
@@ -320,9 +318,6 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 	return app.redisPool
 }
 
-func (app *DefaultApp) GetGate() module.Gate {
-	return app.gate
-}
 
 func (app *DefaultApp) GetUser() module.UserManager {
 	return app.userManager

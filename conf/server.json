@@ -36,6 +36,13 @@
         "ByteId": 2,
         "ProcessID": "development"
       }
+    ],
+    "User": [
+      {
+        "Id": "User002",
+        "ByteId": 2,
+        "ProcessID": "development"
+      }
     ]
   },
   "Rpc": {
