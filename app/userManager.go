@@ -5,6 +5,7 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils/lru"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 type DefaultUserManager struct {
@@ -24,6 +25,27 @@ func InitUserManager(app module.App, lruSize int32) (um module.UserManager) {
 }
 
 func (um *DefaultUserManager) OnUserLogOut(user *base.BaseUser) {
+	conn, err := um.app.GetRedis().Dial()
+	if conn != nil && err == nil {
+		var token string
+		var rToken string
+		var err1 error
+		token, err1 = redis.String(conn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
+		rToken, err1 = redis.String(conn.Do("GET", base.ID_REFRESH_TOKEN_PREFIX+user.UserID))
+		_, err1 = conn.Do("DEL", base.TOKEN_PERFIX+token)
+		_, err1 = conn.Do("DEL", base.REFRESH_TOKEN_PERFIX+rToken)
+		_, err1 = conn.Do("DEL", base.ID_TOKEN_PERFIX+user.UserID)
+		_, err1 = conn.Do("DEL", base.ID_REFRESH_TOKEN_PREFIX+user.UserID)
+
+		var session string
+		session, err1 = redis.String(conn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
+		_, err1 = conn.Do("DEL", base.SESSION_PERFIX+session)
+		_, err1 = conn.Do("DEL", base.ID_SESSION_PREFIX+user.UserID)
+		if err1 != nil {
+			log.Error(err1.Error())
+		}
+
+	}
 	if um.logOutCallBack != nil {
 		um.logOutCallBack(user)
 	}
@@ -40,24 +62,39 @@ func (um *DefaultUserManager) OnUserRegister(user *base.BaseUser) {
 	}
 }
 
-func (um *DefaultUserManager) CheckUserLogin(sessionId string) {
+func (um *DefaultUserManager) OnUserConnect(sessionId string) {
 	um.VerifyUser(sessionId)
 
 }
-func (um *DefaultUserManager) CheckUserLogOut(sessionId string) {
-	_, exit := um.users.Get(sessionId)
+func (um *DefaultUserManager) OnUserDisconnect(sessionId string) {
+	user, exit := um.users.Get(sessionId)
 	if exit {
+		user1 := user.(*base.BaseUser)
 		um.users.Remove(sessionId)
+		conn, err1 := um.app.GetRedis().Dial()
+		if conn != nil && err1 == nil {
+			exits, _ := redis.Bool(conn.Do("EXITS", base.SESSION_PERFIX+sessionId))
+			if exits {
+				_, err1 = conn.Do("DEL", base.SESSION_PERFIX+sessionId)
+				_, err1 = conn.Do("DEL", base.ID_SESSION_PREFIX+user1.UserID)
+			}
+
+			if err1 != nil {
+				log.Error(err1.Error())
+			}
+		}
 	}
 }
 func (um *DefaultUserManager) VerifyUser(sessionId string) (user *base.BaseUser) {
 	obj, exit := um.users.Get(sessionId)
-	user = obj.(*base.BaseUser)
 	if exit {
+		user = obj.(*base.BaseUser)
 		return
 	}
+
 	uid := um.VerifyUserID(sessionId)
 	if uid == "" {
+		log.Info("uid is nil : %s", sessionId)
 		return nil
 	}
 	user = &base.BaseUser{

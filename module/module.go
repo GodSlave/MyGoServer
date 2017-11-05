@@ -53,6 +53,7 @@ type App interface {
 	GetSettings() conf.Config //获取配置信息
 	RpcInvokeNRArgs(module RPCModule, moduleType string, _func string, sessionId string, args []byte) (err error)
 	RpcInvokeArgs(module RPCModule, moduleType string, _func string, sessionId string, args []byte) (result interface{}, err *base.ErrorCode)
+	RpcAllInvokeArgs(module RPCModule, moduleType string, _func string, sessionId string, args []byte) (result []interface{}, err []*base.ErrorCode)
 	/**
 	添加一个 自定义参数序列化接口
 	gate,system 关键词一被占用请使用其他名称

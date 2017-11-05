@@ -1,8 +1,12 @@
 package base
 
+
 var SESSION_PERFIX = "session"
+var ID_SESSION_PREFIX = "USession"
 var TOKEN_PERFIX = "token"
+var ID_TOKEN_PERFIX = "UToken"
 var REFRESH_TOKEN_PERFIX = "rToken"
+var ID_REFRESH_TOKEN_PREFIX = "URTOKEN"
 
 // DB model
 type BaseUser struct {
@@ -13,4 +17,10 @@ type BaseUser struct {
 	UserID    string `xorm:"unique index notnull"`
 	Id        int64
 	CreatTime int64
+}
+
+type PushItem struct {
+	Module   byte
+	PushType byte
+	Content	 *PushContent
 }

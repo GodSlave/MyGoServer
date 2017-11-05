@@ -30,6 +30,7 @@ import (
 	"github.com/GodSlave/MyGoServer/mqtt/sessions"
 	"github.com/GodSlave/MyGoServer/mqtt/topics"
 	"github.com/GodSlave/MyGoServer/mqtt"
+	"github.com/GodSlave/MyGoServer/utils"
 )
 
 var (
@@ -112,7 +113,7 @@ type Server struct {
 	// A indicator on whether this server has already checked configuration
 	configOnce sync.Once
 
-	Services map[string]*Service
+	Services *utils.BeeMap
 
 	subs []interface{}
 	qoss []byte
@@ -129,7 +130,6 @@ func (this *Server) ListenAndServe(uri string) error {
 	if !atomic.CompareAndSwapInt32(&this.running, 0, 1) {
 		return fmt.Errorf("server/ListenAndServe: Server is already running")
 	}
-
 	this.quit = make(chan struct{})
 
 	u, err := url.Parse(uri)
@@ -222,11 +222,12 @@ func (this *Server) PublishToClient(msg *message.PublishMessage, sessionID strin
 		return err
 	}
 
-	service, _err := this.Services[sessionID]
-	if !_err {
+	obj := this.Services.Get(sessionID)
+	if obj == nil {
 		log.Info("ssssionID not found %s", sessionID)
 		return nil
 	}
+	service := obj.(*Service)
 	msg.SetRetain(false)
 	service.Publish(msg, onComplete)
 	return nil
@@ -352,8 +353,7 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		Services:   this.Services,
 	}
 	err = this.getSession(svc, req, resp)
-	this.Services[string(req.ClientId())] = svc
-
+	this.Services.Set(string(req.ClientId()), svc)
 	if err != nil {
 		return nil, err
 	}

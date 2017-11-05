@@ -10,52 +10,59 @@ message UserTokenData {
 }
 
 
-
 message UserData {
     string UserName = 1;
     string UserID = 2;
 
 }
 
-message UserLoginRequest {
+message User_Login_Request {
     string username = 1;
     string password = 2;
 }
 
-message UserLoginResponse {
+message User_Login_Response {
     UserTokenData user_token_data = 1;
 }
 
 
-message UserRegisterRequest {
+message User_Register_Request {
     string username = 1;
     string password = 2;
     string verifyCode = 3;
     string openId = 4;
 }
 
-message UserRegisterResponse {
+message User_Register_Response {
     string result = 1;
 }
 
-message UserGetVerifyCodeRequest {
+message User_GetVerifyCode_Request {
     string phoneNumber = 1;
 }
 
-message UserGetVerifyCodeResponse {
+message User_GetVerifyCode_Response {
 
 }
 
-message UserGetSelfInfoRequest {
+message User_GetSelfInfo_Request {
 
 }
 
-message UserGetSelfInfoResponse {
+message User_GetSelfInfo_Response {
     UserData userData = 1;
 }
 
-message UserLogOutRequest {
+message User_LogOut_Request {
 }
 
-message UserLogOutResponse {
+message User_LogOut_Response {
+}
+
+message User_RefreshToken_Request {
+    string refresh_token = 1;
+}
+
+message User_RefreshToken_Response {
+    UserTokenData tokenData = 1;
 }

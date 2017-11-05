@@ -12,6 +12,7 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"time"
 	"github.com/GodSlave/MyGoServer/utils/uuid"
+	"encoding/json"
 )
 
 type ModuleUser struct {
@@ -64,30 +65,21 @@ func (m *ModuleUser) OnDestroy() {
 	m.GetServer().OnDestroy()
 }
 
-func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *UserLoginResponse, err *base.ErrorCode) {
+func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *User_Login_Response, err *base.ErrorCode) {
 	user := new(base.BaseUser)
 	has, err1 := m.sqlEngine.Where("name=?", form.Username).Get(user)
 	if err1 == nil && has {
 		md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
 		if user.Password == hex.EncodeToString(md5sum[:]) {
 			conn := m.redisPool.Get()
-			_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, user.UserID)
-			_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*24)
-
-			token := uuid.RandNumbers(32)
-			rToken := uuid.RandNumbers(32)
-
-			_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, user.UserID)
-			_, err1 = conn.Do("EXPIRE", base.TOKEN_PERFIX+token, 3600*24*7)
-			_, err1 = conn.Do("SET", base.REFRESH_TOKEN_PERFIX+rToken, user.UserID)
-			_, err1 = conn.Do("EXPIRE", base.REFRESH_TOKEN_PERFIX+rToken, 3600*24*14)
-
-			if err1 != nil {
+			m.removeLoginUser(user, conn, SessionId)
+			token, rToken := m.createToken(SessionId, user.UserID, conn)
+			if token == "" {
 				log.Error("operate redis error")
 				return nil, base.ErrInternal
 			}
 
-			loginReq := &UserLoginResponse{
+			loginReq := &User_Login_Response{
 
 				UserTokenData: &UserTokenData{
 					Token:        token,
@@ -102,7 +94,62 @@ func (m *ModuleUser) Login(SessionId string, form *UserLoginRequest) (result *Us
 	return nil, base.ErrLoginFail
 }
 
-func (m *ModuleUser) Register(SessionId string, form *UserRegisterRequest) (result *UserRegisterResponse, err *base.ErrorCode) {
+func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
+	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
+	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
+	if token != "" || session != "" && (currentSession != token && currentSession != user.UserID) {
+		m.app.GetUserManager().OnUserLogOut(user)
+		go func() {
+			//send offline reason
+			pushItem := base.PushItem{
+				Module:   0,
+				PushType: 0,
+				Content: &base.PushContent{
+					Content: []byte("Other client Login"),
+				},
+			}
+			content, _ := json.Marshal(pushItem)
+			if session != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
+				m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
+			} else if token != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
+				m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
+			}
+		}()
+	}
+
+	if err != nil {
+		log.Error(err.Error())
+	}
+
+}
+
+func (m *ModuleUser) createToken(SessionId string, UserID string, conn redis.Conn) (token string, rToken string) {
+	_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, UserID)
+	_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*24)
+	_, err1 = conn.Do("SET", base.ID_SESSION_PREFIX+UserID, SessionId)
+	_, err1 = conn.Do("EXPIRE", base.ID_SESSION_PREFIX+UserID, 3600*24)
+	token = uuid.SafeString(32)
+	rToken = uuid.SafeString(32)
+	_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, UserID)
+	_, err1 = conn.Do("EXPIRE", base.TOKEN_PERFIX+token, 3600*24*7)
+	_, err1 = conn.Do("SET", base.REFRESH_TOKEN_PERFIX+rToken, UserID)
+	_, err1 = conn.Do("EXPIRE", base.REFRESH_TOKEN_PERFIX+rToken, 3600*24*14)
+
+	_, err1 = conn.Do("SET", base.ID_TOKEN_PERFIX+UserID, token)
+	_, err1 = conn.Do("SET", base.ID_REFRESH_TOKEN_PREFIX+UserID, rToken)
+	_, err1 = conn.Do("EXPIRE", base.ID_TOKEN_PERFIX+UserID, 3600*24*7)
+	_, err1 = conn.Do("EXPIRE", base.ID_REFRESH_TOKEN_PREFIX+UserID, 3600*24*7)
+
+	if err1 != nil {
+		log.Error(err1.Error())
+		return "", ""
+	}
+	return token, rToken
+}
+
+func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (result *User_Register_Response, err *base.ErrorCode) {
 
 	if len(form.Username) < 8 || len(form.Password) < 8 {
 		return nil, base.ErrNameOrPwdShort
@@ -135,19 +182,18 @@ func (m *ModuleUser) Register(SessionId string, form *UserRegisterRequest) (resu
 		CreatTime: time.Now().Unix(),
 		UserID:    uuid.Rand().Hex(),
 	}
-	affected, err3 := m.sqlEngine.Insert(user)
+	_, err3 := m.sqlEngine.Insert(user)
 	if err3 != nil {
 		log.Error(err3.Error())
 		return nil, base.ErrInternal
 	}
-	log.Info("%v", affected)
 	m.app.GetUserManager().OnUserRegister(user)
-	return &UserRegisterResponse{
+	return &User_Register_Response{
 		Result: "success",
 	}, base.ErrNil
 }
 
-func (m *ModuleUser) GetVerifyCode(SessionId string, form UserGetVerifyCodeRequest) (result *UserGetVerifyCodeResponse, err *base.ErrorCode) {
+func (m *ModuleUser) GetVerifyCode(SessionId string, form User_GetVerifyCode_Request) (result *User_GetVerifyCode_Response, err *base.ErrorCode) {
 	randString := uuid.RandNumbers(6)
 	conn := m.redisPool.Get()
 	var err1 error
@@ -162,13 +208,13 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form UserGetVerifyCodeReque
 	return nil, base.ErrNil
 }
 
-func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *UserGetSelfInfoResponse, err *base.ErrorCode) {
+func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *User_GetSelfInfo_Response, err *base.ErrorCode) {
 	if user == nil {
 		err = base.ErrNeedLogin
 		return
 	}
 
-	result = &UserGetSelfInfoResponse{
+	result = &User_GetSelfInfo_Response{
 		UserData: &UserData{
 			UserName: user.Name,
 			UserID:   user.UserID,
@@ -177,13 +223,31 @@ func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *UserGetSelfInfoRe
 	return
 }
 
-func (m *ModuleUser) LogOut(user *base.BaseUser) (result *UserLoginResponse, err *base.ErrorCode) {
+func (m *ModuleUser) LogOut(user *base.BaseUser) (result *User_Login_Response, err *base.ErrorCode) {
 	if user == nil {
 		err = base.ErrNeedLogin
 		return
 	}
-
 	m.app.GetUserManager().OnUserLogOut(user)
+	return
+}
 
+func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Request) (result *User_RefreshToken_Response, err *base.ErrorCode) {
+	conn, err1 := m.redisPool.Dial()
+	if conn != nil && err1 == nil {
+		userid, err1 := redis.String(conn.Do("GET", base.REFRESH_TOKEN_PERFIX+form.RefreshToken))
+		if err1 == nil {
+			conn := m.redisPool.Get()
+			token, rToken := m.createToken(sessionId, userid, conn)
+			refreshResponse := &User_RefreshToken_Response{
+				TokenData: &UserTokenData{
+					Token:        token,
+					RefreshToken: rToken,
+					ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+				},
+			}
+			return refreshResponse, base.ErrNil
+		}
+	}
 	return
 }

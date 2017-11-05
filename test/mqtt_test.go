@@ -54,7 +54,7 @@ func TestJson(t *testing.T) {
 
 func RegisterI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
 	fmt.Println("start register")
-	login := &user.UserRegisterRequest{
+	login := &user.User_Register_Request{
 		Username:   user1.Name,
 		Password:   user1.Password,
 		VerifyCode: "aabbcc",
@@ -67,10 +67,15 @@ func RegisterI(client *service.Client, user1 *base.BaseUser, callback chan *gate
 }
 
 func GetSelfInfoI(client *service.Client, callback chan *gate.AllResponse) (err error) {
-	fmt.Println("start register")
+	fmt.Println("start getSelfInfo")
 	err = client.Publish(testbase.BuildIPublishMessage(client, nil, "User", "GetSelfInfo"), nil)
 	var allrespon *gate.AllResponse
-	allrespon = <-callback
-	fmt.Println("GetSelfInfoI Response", allrespon.State)
+	if err == nil {
+		allrespon = <-callback
+		fmt.Println("GetSelfInfoI Response", allrespon.State)
+	} else {
+		fmt.Println(err.Error())
+	}
+
 	return err
 }

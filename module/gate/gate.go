@@ -14,6 +14,7 @@ import (
 	"github.com/GodSlave/MyGoServer/utils/aes"
 	"github.com/garyburd/redigo/redis"
 	"github.com/go-xorm/xorm"
+	"github.com/GodSlave/MyGoServer/utils"
 )
 
 var RPC_PARAM_SESSION_TYPE = "SESSION"
@@ -51,6 +52,8 @@ func (m *Gate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	//read setting
 	m.BaseModule.OnInit(m, app, settings) //这是必须的
 	m.redisPool = app.GetRedis()
+	m.GetServer().RegisterGO("PushMessage", 1, m.PushMessage)
+	m.GetServer().RegisterGO("KickOut", 2, m.KickOut)
 }
 
 func (m *Gate) Run(closeSig chan bool) {
@@ -62,7 +65,7 @@ func (m *Gate) Run(closeSig chan bool) {
 		Authenticator:    "mockSuccess", // always succeed
 		TopicsProvider:   "mem",         // keeps topic subscriptions in memory
 		BusinessAgent:    m,
-		Services:         make(map[string]*service.Service),
+		Services:         utils.NewBeeMap(),
 	}
 	// Listen and serve connections at localhost:1883
 	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
@@ -133,7 +136,7 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
 		payload, err = aesCipher.Decrypt(payload)
-		log.Info(string(payload))
+		log.Debug(string(payload))
 		if err != nil {
 			log.Error(err.Error())
 			return false
@@ -155,6 +158,7 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 			toResult(topic, nil, base.ErrNotFound, packetId)
 			return false
 		}
+
 		if string(arg1) == "null" {
 			arg1 = nil
 		}
@@ -209,7 +213,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
 		payload, err = aesCipher.Decrypt(payload)
-		log.Info("%v", payload)
+		log.Debug("%v", payload)
 		if err != nil {
 			log.Error(err.Error())
 			return false
@@ -232,8 +236,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessions.Session) error {
 	publish := message.NewPublishMessage()
 	publish.SetTopic(topic)
-	log.Debug("%v", body)
-	if (m.GetApp().GetSettings().Secret) {
+	if m.GetApp().GetSettings().Secret {
 		aesCipher, _ := aes.NewAesEncrypt(sess.AesKey)
 		var err error
 		body, err = aesCipher.EncryptBytes(body)
@@ -250,8 +253,10 @@ func (m *Gate) WriteMsg(topic []byte, body []byte, packetId uint16, sess *sessio
 }
 
 func (m *Gate) OnDisConnect(sess *sessions.Session) {
-	log.Info("%s disconnect ", sess.Id)
-	m.disConnCallback(sess.Id)
+	log.Debug("%s disconnect ", sess.Id)
+	if m.disConnCallback != nil {
+		m.disConnCallback(sess.Id)
+	}
 	//m.App.OnUserLogOut(sess.Id)
 	if m.App.GetUserManager() != nil {
 		m.App.GetUserManager().OnUserDisconnect(sess.Id)
@@ -259,7 +264,6 @@ func (m *Gate) OnDisConnect(sess *sessions.Session) {
 }
 
 func (m *Gate) OnConnect(sess *sessions.Session) {
-	log.Info("%s connect ", sess.Id)
 	if m.connCallBack != nil {
 		m.connCallBack(sess.Id)
 	}
@@ -274,4 +278,78 @@ func (m *Gate) SetOnConnectCallBack(callback module.ConnectEventCallBack) {
 }
 func (m *Gate) SetOnDisConnectCallBack(callback module.ConnectEventCallBack) {
 	m.disConnCallback = callback
+}
+
+func (m *Gate) PushMessage(userId string, item *base.PushItem) {
+	service := m.getService(userId)
+	if service != nil {
+		topic := []byte{'p'}
+		content, err := json.Marshal(item)
+		if err == nil {
+			m.WriteMsg(topic, content, 0, service.GetSession())
+		} else {
+			log.Error(err.Error())
+		}
+		log.Debug(string(content))
+
+		topic = []byte{'q'}
+		topic2 := []byte{'f'}
+		protoContent, _ := proto.Marshal(interface{}(item.Content).(proto.Message))
+		r := &AllResponse{
+			Msg:    "",
+			Result: protoContent,
+			State:  0,
+		}
+
+		realProtoMsg, _ := proto.Marshal(interface{}(r).(proto.Message))
+
+		if err == nil {
+			realContent := make([]byte, len(content)+2)
+			realContent[0] = item.Module
+			realContent[1] = item.PushType
+			copy(realContent[2:], content)
+			m.WriteMsg(topic, realProtoMsg, 0, service.GetSession())
+			m.WriteMsg(topic2, realProtoMsg, 0, service.GetSession())
+		} else {
+			log.Error(err.Error())
+		}
+	} else {
+	}
+
+}
+
+func (m *Gate) getService(userId string) *service.Service {
+	if obj := m.svr.Services.Get(userId); obj != nil {
+		return obj.(*service.Service)
+	} else {
+		conn, err := m.redisPool.Dial()
+		if err == nil {
+			var token, session string
+			session, _ = redis.String(conn.Do("GET", base.ID_SESSION_PREFIX+userId))
+			token, _ = redis.String(conn.Do("GET", base.ID_TOKEN_PERFIX+userId))
+
+			if session != "" {
+				if obj := m.svr.Services.Get(session); obj != nil {
+					return obj.(*service.Service)
+				}
+			}
+
+			if token != "" {
+				if obj := m.svr.Services.Get(token); obj != nil {
+					return obj.(*service.Service)
+				}
+			}
+		}
+	}
+	log.Info("user Client not Connect :%s", userId)
+	return nil
+}
+
+func (m *Gate) KickOut(userId string) {
+	if obj := m.svr.Services.Get(userId); obj != nil {
+		service := obj.(*service.Service)
+		if service != nil {
+			service.KickOut()
+		}
+	}
 }

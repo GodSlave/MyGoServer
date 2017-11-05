@@ -32,7 +32,7 @@ type AllResponse struct {
 	Result []byte `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
 	// 错误结果 如果为nil表示请求正确
 	Msg string `protobuf:"bytes,2,opt,name=msg" json:"msg,omitempty"`
-	// 错误代码 200 means right
+	// 错误代码 0 means right
 	State int32 `protobuf:"varint,3,opt,name=state" json:"state,omitempty"`
 }
 

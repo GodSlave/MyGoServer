@@ -24,6 +24,7 @@ import (
 	"github.com/GodSlave/MyGoServer/mqtt/sessions"
 	"github.com/GodSlave/MyGoServer/mqtt/topics"
 	"github.com/GodSlave/MyGoServer/mqtt"
+	"github.com/GodSlave/MyGoServer/utils"
 )
 
 type (
@@ -124,7 +125,7 @@ type Service struct {
 
 	msgProcess mymqtt.MsgProcess
 
-	Services map[string]*Service
+	Services *utils.BeeMap
 }
 
 func (this *Service) start() error {
@@ -191,7 +192,9 @@ func (this *Service) start() error {
 // calls this, and closes the buffers, somehow it causes buffer.go:476 to panid.
 func (this *Service) stop() {
 	defer func() {
-		this.msgProcess.OnDisConnect(this.sess)
+		if this.msgProcess!=nil{
+			this.msgProcess.OnDisConnect(this.sess)
+		}
 		// Let's recover from panic
 		if r := recover(); r != nil {
 			log.Error("(%s) Recovering from panic: %v", this.cid(), r)
@@ -221,7 +224,6 @@ func (this *Service) stop() {
 	// Wait for all the goroutines to stop.
 	this.wgStopped.Wait()
 
-
 	// Unsubscribe from all the topics for this client, only for the server side though
 	if !this.client && this.sess != nil {
 		topics, _, err := this.sess.Topics()
@@ -241,8 +243,9 @@ func (this *Service) stop() {
 		log.Info("(%s) Service/stop: connection unexpectedly closed. Sending Will.", this.cid())
 		this.onPublish(this.sess.Will)
 	}
-
-	delete(this.Services,this.sess.Id)
+	if this.Services != nil {
+		this.Services.Delete(this.sess.Id)
+	}
 
 	// Remove the client topics manager
 	if this.client {
@@ -253,8 +256,6 @@ func (this *Service) stop() {
 	if this.sess.Cmsg.CleanSession() && this.sessMgr != nil {
 		this.sessMgr.Del(this.sess.ID())
 	}
-
-
 
 	this.conn = nil
 	this.in = nil
@@ -455,4 +456,12 @@ func (this *Service) isDone() bool {
 
 func (this *Service) cid() string {
 	return fmt.Sprintf("%d/%s", this.id, this.sess.ID())
+}
+
+func (this *Service) GetSession() *sessions.Session {
+	return this.sess
+}
+
+func (this *Service) KickOut() {
+	this.stop()
 }

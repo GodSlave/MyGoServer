@@ -74,7 +74,9 @@ func (m *BeeMap) Check(k interface{}) bool {
 // Delete the given key and value.
 func (m *BeeMap) Delete(k interface{}) {
 	m.lock.Lock()
-	delete(m.bm, k)
+	if _, has := m.bm[k]; has {
+		delete(m.bm, k)
+	}
 	m.lock.Unlock()
 }
 

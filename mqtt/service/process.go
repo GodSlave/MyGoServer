@@ -52,17 +52,17 @@ func (this *Service) processor() {
 		// 1. Find out what message is next and the size of the message
 		mtype, total, err := this.peekMessageSize()
 		if err != nil {
-			//if err != io.EOF {
-			log.Error("(%s) Error peeking next message size: %v", this.cid(), err)
-			//}
+			if err != io.EOF {
+				log.Info("(%s) Error peeking next message size: %v", this.cid(), err)
+			}
 			return
 		}
 
 		msg, n, err := this.peekMessage(mtype, total)
 		if err != nil {
-			//if err != io.EOF {
-			log.Error("(%s) Error peeking next message: %v", this.cid(), err)
-			//}
+			if err != io.EOF {
+				log.Info("(%s) Error peeking next message: %v", this.cid(), err)
+			}
 			return
 		}
 
@@ -229,7 +229,7 @@ func (this *Service) processAcked(ackq *sessions.Ackqueue) {
 			}
 
 		case message.PUBACK, message.PUBCOMP, message.SUBACK, message.UNSUBACK, message.PINGRESP:
-			 //log.Debug("process/processAcked: %s", ack)
+			//log.Debug("process/processAcked: %s", ack)
 			// If ack is PUBACK, that means the QoS 1 message sent by this Service got
 			// ack'ed. There's nothing to do other than calling onComplete() below.
 
@@ -333,7 +333,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 					if err == nil {
 						md5result := base.GetMd5T([]byte(this.sess.Id), randBytes)
 						this.sess.AesKey = md5result[:]
-						log.Info("AesKey is %v", md5result)
+						//log.Info("AesKey is %v", md5result)
 					} else {
 						log.Error(err.Error())
 					}

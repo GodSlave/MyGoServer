@@ -10,7 +10,6 @@ import (
 	"github.com/GodSlave/MyGoServer/utils/aes"
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/module/user"
-	"time"
 	"strconv"
 	"testing"
 )
@@ -78,20 +77,55 @@ func SubI(client *service.Client, checkChan chan *gate.AllResponse) error {
 		}
 		return err
 	})
+
+	fmt.Println("start sub p")
+	submsg1 := message.NewSubscribeMessage()
+	submsg1.AddTopic([]byte("p"), 1)
+	chanout1 := make(chan int, 1)
+	client.Subscribe(submsg1, func(msg, ack message.Message, err error) error {
+		fmt.Println("ack ", ack)
+		chanout1 <- 1
+		return nil
+	}, func(msg *message.PublishMessage) error {
+		fmt.Println("get response " + msg.String())
+		payload := msg.Payload()
+		aesCipher, _ := aes.NewAesEncrypt(client.GetSession().AesKey)
+		var err error
+		payload, err = aesCipher.Decrypt(payload)
+		var pushContent = &base.PushItem{}
+		err = json.Unmarshal(payload, pushContent)
+		if err == nil {
+			allRepon := &gate.AllResponse{
+				Result: pushContent.Content.Content,
+				State:  0,
+			}
+			checkChan <- allRepon
+		} else {
+			fmt.Println(err.Error())
+		}
+		return err
+	})
+
 	<-chanout
+	<-chanout1
+
 	return nil
 }
 
 func LoginI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
 	fmt.Println("start login")
-	login := &user.UserLoginRequest{
+	login := &user.User_Login_Request{
 		Username: user1.Name,
 		Password: user1.Password,
 	}
 	err = client.Publish(BuildIPublishMessage(client, login, "User", "Login"), nil)
-	var allrespon *gate.AllResponse
-	allrespon = <-callback
-	fmt.Println("login Response", allrespon.State)
+	if err == nil {
+		var allrespon *gate.AllResponse
+		allrespon = <-callback
+		fmt.Println("login Response", allrespon.State)
+	} else {
+		fmt.Println(err.Error())
+	}
 	return err
 }
 func BuildIPublishMessage(c *service.Client, value interface{}, module string, method string) *message.PublishMessage {
@@ -110,22 +144,26 @@ func BuildIPublishMessage(c *service.Client, value interface{}, module string, m
 		pub.SetQoS(1)
 		pub.SetTopic([]byte("i"))
 		return pub
+	} else {
+		fmt.Println(err.Error())
 	}
 
 	return nil
 }
 
-
-func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllResponse) {
-	var err error
+func InitConnect(t *testing.T) (*service.Client, chan *gate.AllResponse) {
 	c := InitClient()
 	if c == nil {
 		t.Fatal("clint build fail")
 	}
-	time.Sleep(1 * time.Second)
 	checkChan := make(chan *gate.AllResponse)
 	SubI(c, checkChan)
-	time.Sleep(1 * time.Second)
+	return c, checkChan
+}
+
+func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllResponse) {
+	c, checkChan := InitConnect(t)
+	var err error
 	user := &base.BaseUser{
 		Name:     "zhanglin",
 		Password: "woaini1232",

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package base;
+message PushContent {
+    //推送内容
+    bytes content = 1;
+}

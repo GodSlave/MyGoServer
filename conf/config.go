@@ -150,7 +150,6 @@ func readFileInto(path string) error {
 		}
 	}
 	data = buf.Bytes()
-	fmt.Print(string(data))
 	return json.Unmarshal(data, &Conf)
 }
 

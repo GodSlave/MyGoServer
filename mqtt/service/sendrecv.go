@@ -55,7 +55,6 @@ func (this *Service) receiver() {
 		log.Debug("(%s) Stopping receiver", this.cid())
 	}()
 
-	log.Debug("(%s) Starting receiver", this.cid())
 
 	this.wgStarted.Done()
 
@@ -73,7 +72,7 @@ func (this *Service) receiver() {
 
 			if err != nil {
 				if err != io.EOF {
-					log.Error("(%s) error reading from connection: %v", this.cid(), err)
+					log.Info("(%s) error reading from connection: %v", this.cid(), err)
 				}
 				return
 			}
@@ -100,7 +99,6 @@ func (this *Service) sender() {
 		log.Debug("(%s) Stopping sender", this.cid())
 	}()
 
-	log.Debug("(%s) Starting sender", this.cid())
 
 	this.wgStarted.Done()
 

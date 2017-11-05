@@ -22,7 +22,25 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils"
+	"time"
 )
+
+type DefaultApp struct {
+	module.App
+	version           string
+	serverList        map[string]module.ServerSession
+	byteServerList    map[byte]module.ServerSession
+	settings          conf.Config
+	routes            map[string]func(app module.App, Type string, hash string) module.ServerSession
+	byteRoutes        map[byte]func(app module.App, Type byte, hash string) module.ServerSession
+	defaultRoutes     func(app module.App, Type string, hash string) module.ServerSession
+	byteDefaultRoutes func(app module.App, Type byte, hash string) module.ServerSession
+	rpcserializes     map[string]module.RPCSerialize
+	Engine            *xorm.Engine
+	redisPool         *redis.Pool
+	psc               *redis.PubSubConn
+	userManager       module.UserManager
+}
 
 func NewApp() module.App {
 	newApp := new(DefaultApp)
@@ -56,23 +74,6 @@ func NewApp() module.App {
 	return newApp
 }
 
-type DefaultApp struct {
-	module.App
-	version           string
-	serverList        map[string]module.ServerSession
-	byteServerList    map[byte]module.ServerSession
-	settings          conf.Config
-	routes            map[string]func(app module.App, Type string, hash string) module.ServerSession
-	byteRoutes        map[byte]func(app module.App, Type byte, hash string) module.ServerSession
-	defaultRoutes     func(app module.App, Type string, hash string) module.ServerSession
-	byteDefaultRoutes func(app module.App, Type byte, hash string) module.ServerSession
-	rpcserializes     map[string]module.RPCSerialize
-	Engine            *xorm.Engine
-	redisPool         *redis.Pool
-	psc               *redis.PubSubConn
-	userManager       module.UserManager
-}
-
 func (app *DefaultApp) Run(mods ...module.Module) error {
 	file, _ := exec.LookPath(os.Args[0])
 	ApplicationPath, _ := filepath.Abs(file)
@@ -98,8 +99,8 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	conf.LoadConfig(f.Name()) //加载配置文件
 	app.Configure(conf.Conf)  //配置信息
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
-	log.Info("mqant %v starting up", app.version)
-	log.Info("start connect DB %v", conf.Conf.DB.SQL)
+	log.Info("mqant %v starting up at %v", app.version, time.Now().Unix())
+	log.Debug("start connect DB %v", conf.Conf.DB.SQL)
 
 	app.userManager = InitUserManager(app, conf.Conf.OnlineLimit)
 
@@ -302,6 +303,18 @@ func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string,
 	return server.CallArgs(_func, sessionId, args)
 }
 
+func (app *DefaultApp) RpcAllInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result []interface{}, err []*base.ErrorCode) {
+	servers := app.GetServersByType(moduleType)
+	result = []interface{}{}
+	err = []*base.ErrorCode{}
+	for _, server := range servers {
+		resultItem, errItem := server.CallArgs(_func, sessionId, args)
+		result = append(result, resultItem)
+		err = append(err, errItem)
+	}
+	return
+}
+
 func (app *DefaultApp) RpcInvokeNRArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (err error) {
 	server, err := app.GetRouteServers(moduleType, module.GetServerId())
 	if err != nil {
@@ -318,8 +331,7 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 	return app.redisPool
 }
 
-
-func (app *DefaultApp) GetUser() module.UserManager {
+func (app *DefaultApp) GetUserManager() module.UserManager {
 	return app.userManager
 }
 

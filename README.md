@@ -17,9 +17,13 @@ MQTT服务端使用surgeMQ 并为了安全性和包大小考虑做了一部分�
 5. s f i topic 全部采用qos1 消息级别
 6. 因为目前内置mqtt还不支持SSL ，所以登录操作在获取密钥后进行
 
-f  topic 表示通讯内容使用protobuf 格式  
-i  topic 表示通讯内容使用json格式  
 
+f  topic 表示通讯内容使用protobuf 格式  
+i  topic 表示通讯内容使用json格式
+p  topic 表示服务器发来的推送消息 json格式
+q  topic 表示服务器发来的推送消息 protobuf格式
+
+注意： protoBuf格式的推送会在p和q通道同时推送，请根据需要注册
 
 注册s topic成功后  服务器端会返回一段32位字符串，使用 服务器端字符串和客户端ID进行字符串拼接 并交换第32位和第6位，交换第48位和第31位后进行MD5取值，并取md5结果16位byte作为AES加密密钥 同时作为iv和ciper， 获取加密密钥后可以注册s端口
 获取AES密钥成功后，后续 s，f topic 通讯统一使用该密钥对payload内容加密  
@@ -87,7 +91,13 @@ byte2 对应 Func编号
  3. 进入test目录 找到 testJson 方法 开始执行
 
 ## 模块列表
-| module | module | 
+| module | module |
 | -------- | -------- |
 |gate|1|
 |user|2|
+|push|3|
+|push|4|
+... 保留编号到10
+请用户使用的时候从11开始使用
+
+
