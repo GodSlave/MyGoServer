@@ -16,6 +16,9 @@ func (sql *BaseSql) InitDB() {
 	var engine *xorm.Engine
 	var err error
 	engine, err = xorm.NewEngine("mysql", sql.Url)
+	logger := xorm.NewSimpleLogger(sql)
+	logger.Debug()
+	engine.ShowSQL(true)
 	if err == nil {
 		sql.Engine = engine
 	} else {
@@ -56,4 +59,9 @@ func checkError(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (sql *BaseSql) Write(p []byte) (n int, err error) {
+	log.Error(string(p))
+	return 0, nil
 }

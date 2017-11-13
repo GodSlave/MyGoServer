@@ -40,6 +40,7 @@ type DefaultApp struct {
 	redisPool         *redis.Pool
 	psc               *redis.PubSubConn
 	userManager       module.UserManager
+	initDownCallback  module.OnInitDownCallBack
 }
 
 func NewApp() module.App {
@@ -70,7 +71,6 @@ func NewApp() module.App {
 
 	newApp.rpcserializes = map[string]module.RPCSerialize{}
 	newApp.version = "0.0.1"
-	//newApp.users = map[string]*base.BaseUser{}
 	return newApp
 }
 
@@ -99,7 +99,8 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	conf.LoadConfig(f.Name()) //加载配置文件
 	app.Configure(conf.Conf)  //配置信息
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
-	log.Info("mqant %v starting up at %v", app.version, time.Now().Unix())
+
+	log.Info("server %v starting up at %v", app.version, time.Now().Unix())
 	log.Debug("start connect DB %v", conf.Conf.DB.SQL)
 
 	app.userManager = InitUserManager(app, conf.Conf.OnlineLimit)
@@ -131,6 +132,11 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	}
 	app.OnInit(app.settings)
 	manager.Init(app, *ProcessID)
+
+	if app.initDownCallback != nil {
+		app.initDownCallback(app)
+	}
+
 	// close
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -333,6 +339,10 @@ func (app *DefaultApp) GetRedis() *redis.Pool {
 
 func (app *DefaultApp) GetUserManager() module.UserManager {
 	return app.userManager
+}
+
+func (app *DefaultApp) SetInitDownCallBack(callBack module.OnInitDownCallBack) {
+	app.initDownCallback = callBack
 }
 
 //

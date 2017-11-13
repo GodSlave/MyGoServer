@@ -123,6 +123,7 @@ func LoginI(client *service.Client, user1 *base.BaseUser, callback chan *gate.Al
 		var allrespon *gate.AllResponse
 		allrespon = <-callback
 		fmt.Println("login Response", allrespon.State)
+		fmt.Println(string(allrespon.Result))
 	} else {
 		fmt.Println(err.Error())
 	}
@@ -175,10 +176,10 @@ func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllRespons
 	return c, user, checkChan
 }
 
-func SendMessage(c *service.Client, checkChan chan *gate.AllResponse, publishMessage *message.PublishMessage) (err error) {
+func SendMessage(c *service.Client, checkChan chan *gate.AllResponse, publishMessage *message.PublishMessage) (err error, response *gate.AllResponse) {
 	err = c.Publish(publishMessage, nil)
 	var allrespon *gate.AllResponse
 	allrespon = <-checkChan
 	fmt.Println("Get Response", strconv.Itoa(int(allrespon.State))+"  "+allrespon.Msg)
-	return err
+	return err, allrespon
 }

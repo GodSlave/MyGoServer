@@ -43,12 +43,12 @@ func TestJson(t *testing.T) {
 	testbase.SubI(c, checkChan)
 	time.Sleep(1 * time.Second)
 	user := &base.BaseUser{
-		Name:     "zhanglin",
+		Name:     "zhanglin"+uuid.Rand().Hex(),
 		Password: "woaini1232",
 	}
-	//RegisterI(c, user, checkChan)
-	testbase.LoginI(c, user, checkChan)
-	GetSelfInfoI(c, checkChan)
+	RegisterI(c, user, checkChan)
+	//testbase.LoginI(c, user, checkChan)
+	//GetSelfInfoI(c, checkChan)
 
 }
 

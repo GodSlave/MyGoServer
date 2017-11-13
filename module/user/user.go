@@ -37,7 +37,7 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("Register", 2, m.Register)
 	m.GetServer().RegisterGO("GetVerifyCode", 3, m.GetVerifyCode)
 	m.GetServer().RegisterGO("GetSelfInfo", 4, m.GetSelfInfo)
-	m.GetServer().RegisterGO("Logout", 5, m.GetSelfInfo)
+	m.GetServer().RegisterGO("Logout", 5, m.LogOut)
 	m.app = app
 
 	var user = &base.BaseUser{}
@@ -80,7 +80,6 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 			}
 
 			loginReq := &User_Login_Response{
-
 				UserTokenData: &UserTokenData{
 					Token:        token,
 					RefreshToken: rToken,
@@ -111,10 +110,10 @@ func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, 
 			content, _ := json.Marshal(pushItem)
 			if session != "" {
 				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
-				m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
 			} else if token != "" {
 				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
-				m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
 			}
 		}()
 	}

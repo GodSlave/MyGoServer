@@ -47,18 +47,19 @@ func (um *DefaultUserManager) OnUserLogOut(user *base.BaseUser) {
 
 	}
 	if um.logOutCallBack != nil {
-		um.logOutCallBack(user)
+		um.logOutCallBack(user, um.app)
 	}
 }
 func (um *DefaultUserManager) OnUserLogin(user *base.BaseUser) {
 	if um.loginCallBack != nil {
-		um.loginCallBack(user)
+		um.loginCallBack(user, um.app)
 	}
 }
 
 func (um *DefaultUserManager) OnUserRegister(user *base.BaseUser) {
+	log.Info("on user register :" + user.Name)
 	if um.registerCallBack != nil {
-		um.registerCallBack(user)
+		um.registerCallBack(user, um.app)
 	}
 }
 
@@ -133,5 +134,5 @@ func (um *DefaultUserManager) SetRegisterCallBack(callback module.UserEventCallB
 	um.registerCallBack = callback
 }
 func (um *DefaultUserManager) SetLogoutCallBack(callback module.UserEventCallBack) {
-	um.registerCallBack = callback
+	um.logOutCallBack = callback
 }

@@ -180,13 +180,18 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 			Result: Result,
 			State:  error.ErrorCode & 0xff,
 		}
+
+		if r.State != 0 {
+			log.Info("meet a error %v", r.State)
+		}
+
 		b, err := proto.Marshal(r)
 		if err == nil {
 			realResult := make([]byte, len(b)+2)
 			copy(realResult[0:2], method[0:2])
 			copy(realResult[2:], b)
 			err := m.WriteMsg(Topic, realResult, packetId, sess)
-			if (err != nil) {
+			if err != nil {
 				log.Error(err.Error())
 			}
 		} else {
