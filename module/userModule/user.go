@@ -73,7 +73,7 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 		if user.Password == hex.EncodeToString(md5sum[:]) {
 			conn := m.redisPool.Get()
 			m.removeLoginUser(user, conn, SessionId)
-			token, rToken := m.createToken(SessionId, user.UserID, conn)
+			token, rToken := CreateToken(SessionId, user.UserID, conn)
 			if token == "" {
 				log.Error("operate redis error")
 				return nil, base.ErrInternal
@@ -124,30 +124,6 @@ func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, 
 
 }
 
-func (m *ModuleUser) createToken(SessionId string, UserID string, conn redis.Conn) (token string, rToken string) {
-	_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, UserID)
-	_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*24)
-	_, err1 = conn.Do("SET", base.ID_SESSION_PREFIX+UserID, SessionId)
-	_, err1 = conn.Do("EXPIRE", base.ID_SESSION_PREFIX+UserID, 3600*24)
-	token = uuid.SafeString(32)
-	rToken = uuid.SafeString(32)
-	_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, UserID)
-	_, err1 = conn.Do("EXPIRE", base.TOKEN_PERFIX+token, 3600*24*7)
-	_, err1 = conn.Do("SET", base.REFRESH_TOKEN_PERFIX+rToken, UserID)
-	_, err1 = conn.Do("EXPIRE", base.REFRESH_TOKEN_PERFIX+rToken, 3600*24*14)
-
-	_, err1 = conn.Do("SET", base.ID_TOKEN_PERFIX+UserID, token)
-	_, err1 = conn.Do("SET", base.ID_REFRESH_TOKEN_PREFIX+UserID, rToken)
-	_, err1 = conn.Do("EXPIRE", base.ID_TOKEN_PERFIX+UserID, 3600*24*7)
-	_, err1 = conn.Do("EXPIRE", base.ID_REFRESH_TOKEN_PREFIX+UserID, 3600*24*7)
-
-	if err1 != nil {
-		log.Error(err1.Error())
-		return "", ""
-	}
-	return token, rToken
-}
-
 func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (result *User_Register_Response, err *base.ErrorCode) {
 
 	if len(form.Username) < 8 || len(form.Password) < 8 {
@@ -165,14 +141,11 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 	}
 
 	c := m.redisPool.Get()
-	reply1, err1 := redis.String(c.Do("GET", verifyCodeKey+form.Username))
-	if err1 != nil {
-		log.Error(err1.Error())
-	}
-
-	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "aabbcc" {
+	checkresult := CheckVerifyCode(form.Username, form.VerifyCode, c)
+	if !checkresult {
 		return nil, base.ErrVerifyCodeErr
 	}
+
 	md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
 	password := hex.EncodeToString(md5sum[:])
 	user = &base.BaseUser{
@@ -197,7 +170,7 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form User_GetVerifyCode_Req
 	conn := m.redisPool.Get()
 	var err1 error
 	_, err1 = conn.Do("SET", verifyCodeKey+form.PhoneNumber, randString)
-	_, err1 = conn.Do("EXPIRE", verifyCodeKey+form.PhoneNumber, 3600)
+	_, err1 = conn.Do("EXPIRE", verifyCodeKey+form.PhoneNumber, 900)
 
 	if err1 != nil {
 		log.Error("operate redis error")
@@ -237,7 +210,7 @@ func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Requ
 		userid, err1 := redis.String(conn.Do("GET", base.REFRESH_TOKEN_PERFIX+form.RefreshToken))
 		if err1 == nil {
 			conn := m.redisPool.Get()
-			token, rToken := m.createToken(sessionId, userid, conn)
+			token, rToken := CreateToken(sessionId, userid, conn)
 			refreshResponse := &User_RefreshToken_Response{
 				TokenData: &UserTokenData{
 					Token:        token,
