@@ -4,17 +4,14 @@
   "Master": {
     //是否启动Master功能,如果为true,进程会每个三秒向Master模块汇报其所在模块运行信息
     "Enable": false,
+    //记录统计信息
+    "SQL": "",
     //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
     "MasterType": "Master",
     //web静态文件路径
     "WebRoot": "/work/go/mqantserver/bin/console",
     //web控制台监听端口
-    "WebHost": "0.0.0.0:8686",
-    //用于远程服务器SSH的配置,本机IP如(127.0.0.1 localhost)无需配置
-    "SSH": [
-    ],
-    "Process": [
-    ]
+    "WebHost": "0.0.0.0:8686"
   },
   "Module": {
     "Gate": [

@@ -41,7 +41,7 @@ func (s *Status) ToDB() ([]byte, error) {
 	return []byte(s.Name), nil
 }
 
-// User describes a user
+// User describes a userModule
 type User struct {
 	Id     int64
 	Name   string

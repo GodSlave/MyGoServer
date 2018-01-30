@@ -1,0 +1,44 @@
+{
+  "Debug": true,
+  "OnlineLimit": 8000,
+  "Name": "work3",
+  "Master": {
+    //是否启动Master功能,如果为true,进程会每个三秒向Master模块汇报其所在模块运行信息
+    "ISRealMaster": false,
+    //记录统计信息
+    "SQlUrl": "develop:Woaini123!@tcp(192.168.0.74:3306)/statistic?charset=utf8",
+    "RedisUrl": "redis://192.168.0.74:6379/2",
+    "RedisPubSubConf": {
+      "Uri": "redis://192.168.0.74:6379/2",
+      "Queue": "APPTrans"
+    },
+    //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
+    "MasterType": "Master"
+  },
+  "Module": {
+    "User": [
+      {
+        "Id": "User001",
+        "ByteId": 2,
+        "ProcessID": "development",
+        "Redis": {
+          "Uri": "redis://192.168.0.74:6379/1",
+          "Queue": "User-User001"
+        }
+      }
+    ]
+  },
+  "Rpc": {
+    // 远程访问最后期限值 单位秒 这个值指定了在客户端可以等待服务端多长时间来应答
+    "RpcExpired": 3
+  },
+  "DB": {
+    "DBtype": "mysql",
+    "SQL": "develop:Woaini123!@tcp(192.168.0.74:3306)/gameserver?charset=utf8",
+    "Redis": "redis://192.168.0.74:6379/1",
+    //多个进程间同步app信息
+    "Redis_Queue": "APP"
+  },
+  //是否启用加密传输
+  "Secret": true
+}

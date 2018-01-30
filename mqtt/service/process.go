@@ -314,7 +314,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 	for i, t := range topics {
 
 		//if t[0] == 'i' || t[0] == 'f' {
-		//	//TODO verify user
+		//	//TODO verify userModule
 		//	if len(this.sess.AesKey) == 0 {
 		//		log.Info("subscribe with error topic id %s", t)
 		//		retcodes = append(retcodes, 0x80)
@@ -339,7 +339,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 					}
 
 				} else {
-					log.Error(" send random code error %s", err.Error())
+					log.Error(" ` random code error %s", err.Error())
 				}
 			}()
 		}

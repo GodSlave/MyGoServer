@@ -113,7 +113,7 @@ func (engine *Engine) SetColumnMapper(mapper core.IMapper) {
 }
 
 // SupportInsertMany If engine's database support batch insert records like
-// "insert into user values (name, age), (name, age)".
+// "insert into userModule values (name, age), (name, age)".
 // When the return is ture, then engine.Insert(&users) will
 // generate batch sql and exeute.
 func (engine *Engine) SupportInsertMany() bool {
@@ -284,9 +284,9 @@ func (engine *Engine) Sql(querystring string, args ...interface{}) *Session {
 // SQL method let's you manually write raw SQL and operate
 // For example:
 //
-//         engine.SQL("select * from user").Find(&users)
+//         engine.SQL("select * from userModule").Find(&users)
 //
-// This    code will execute "select * from user" and set the records to users
+// This    code will execute "select * from userModule" and set the records to users
 func (engine *Engine) SQL(query interface{}, args ...interface{}) *Session {
 	session := engine.NewSession()
 	session.isAutoClose = true
@@ -721,7 +721,7 @@ func (engine *Engine) Desc(colNames ...string) *Session {
 // This method can chainable use.
 //
 //        engine.Desc("name").Asc("age").Find(&users)
-//        // SELECT * FROM user ORDER BY name DESC, age ASC
+//        // SELECT * FROM userModule ORDER BY name DESC, age ASC
 //
 func (engine *Engine) Asc(colNames ...string) *Session {
 	session := engine.NewSession()

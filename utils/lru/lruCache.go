@@ -17,7 +17,10 @@ limitations under the License.
 // Package lru implements an LRU cache.
 package lru
 
-import "container/list"
+import (
+	"container/list"
+	"github.com/GodSlave/MyGoServer/utils"
+)
 
 // Cache is an LRU cache. It is not safe for concurrent access.
 type Cache struct {
@@ -30,7 +33,7 @@ type Cache struct {
 	OnEvicted func(key Key, value interface{})
 
 	ll    *list.List
-	cache map[interface{}]*list.Element
+	cache *utils.BeeMap
 }
 
 // A Key may be any value that is comparable. See http://golang.org/ref/spec#Comparison_operators
@@ -48,23 +51,24 @@ func New(maxEntries int) *Cache {
 	return &Cache{
 		MaxEntries: maxEntries,
 		ll:         list.New(),
-		cache:      make(map[interface{}]*list.Element),
+		cache:      utils.NewBeeMap(),
 	}
 }
 
 // Add adds a value to the cache.
 func (c *Cache) Add(key Key, value interface{}) {
 	if c.cache == nil {
-		c.cache = make(map[interface{}]*list.Element)
+		c.cache = utils.NewBeeMap()
 		c.ll = list.New()
 	}
-	if ee, ok := c.cache[key]; ok {
+	if value, ok := c.Get(key); ok {
+		ee := value.(*list.Element)
 		c.ll.MoveToFront(ee)
 		ee.Value.(*entry).value = value
 		return
 	}
 	ele := c.ll.PushFront(&entry{key, value})
-	c.cache[key] = ele
+	c.cache.Set(key, ele)
 	if c.MaxEntries != 0 && c.ll.Len() > c.MaxEntries {
 		c.RemoveOldest()
 	}
@@ -75,7 +79,9 @@ func (c *Cache) Get(key Key) (value interface{}, ok bool) {
 	if c.cache == nil {
 		return
 	}
-	if ele, hit := c.cache[key]; hit {
+
+	if value := c.cache.Get(key); value != nil {
+		ele := value.(*list.Element)
 		c.ll.MoveToFront(ele)
 		return ele.Value.(*entry).value, true
 	}
@@ -87,9 +93,7 @@ func (c *Cache) Remove(key Key) {
 	if c.cache == nil {
 		return
 	}
-	if ele, hit := c.cache[key]; hit {
-		c.removeElement(ele)
-	}
+	c.cache.Delete(key)
 }
 
 // RemoveOldest removes the oldest item from the cache.
@@ -106,7 +110,7 @@ func (c *Cache) RemoveOldest() {
 func (c *Cache) removeElement(e *list.Element) {
 	c.ll.Remove(e)
 	kv := e.Value.(*entry)
-	delete(c.cache, kv.key)
+	c.cache.Delete(kv.key)
 	if c.OnEvicted != nil {
 		c.OnEvicted(kv.key, kv.value)
 	}
@@ -122,12 +126,7 @@ func (c *Cache) Len() int {
 
 // Clear purges all stored items from the cache.
 func (c *Cache) Clear() {
-	if c.OnEvicted != nil {
-		for _, e := range c.cache {
-			kv := e.Value.(*entry)
-			c.OnEvicted(kv.key, kv.value)
-		}
-	}
+	c.cache.DeleteAll()
 	c.ll = nil
 	c.cache = nil
 }

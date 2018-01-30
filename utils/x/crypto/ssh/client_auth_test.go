@@ -62,7 +62,7 @@ func tryAuth(t *testing.T, config *ClientConfig) error {
 		},
 		PublicKeyCallback: certChecker.Authenticate,
 		KeyboardInteractiveCallback: func(conn ConnMetadata, challenge KeyboardInteractiveChallenge) (*Permissions, error) {
-			ans, err := challenge("user",
+			ans, err := challenge("userModule",
 				"instruction",
 				[]string{"question1", "question2"},
 				[]bool{true, true})
@@ -71,7 +71,7 @@ func tryAuth(t *testing.T, config *ClientConfig) error {
 			}
 			ok := conn.User() == "testuser" && ans[0] == "answer1" && ans[1] == "answer2"
 			if ok {
-				challenge("user", "motd", nil, nil)
+				challenge("userModule", "motd", nil, nil)
 				return nil, nil
 			}
 			return nil, errors.New("keyboard-interactive failed")
@@ -273,7 +273,7 @@ func TestClientLoginCert(t *testing.T) {
 	}
 
 	clientConfig := &ClientConfig{
-		User: "user",
+		User: "userModule",
 	}
 	clientConfig.Auth = append(clientConfig.Auth, PublicKeys(certSigner))
 
@@ -311,7 +311,7 @@ func TestClientLoginCert(t *testing.T) {
 	cert.CertType = UserCert
 
 	// principal specified
-	cert.ValidPrincipals = []string{"user"}
+	cert.ValidPrincipals = []string{"userModule"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err != nil {
 		t.Errorf("cert login failed: %v", err)
@@ -423,7 +423,7 @@ func ExampleRetryableAuthMethod(t *testing.T) {
 	user := "testuser"
 	NumberOfPrompts := 3
 
-	// Normally this would be a callback that prompts the user to answer the
+	// Normally this would be a callback that prompts the userModule to answer the
 	// provided questions
 	Cb := func(user, instruction string, questions []string, echos []bool) (answers []string, err error) {
 		return []string{"answer1", "answer2"}, nil

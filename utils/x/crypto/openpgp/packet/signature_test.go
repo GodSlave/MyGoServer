@@ -71,7 +71,7 @@ func TestSignUserId(t *testing.T) {
 
 	err = sig.SignUserId("", pubKey, privKey, nil)
 	if err != nil {
-		t.Errorf("failed to sign user id: %v", err)
+		t.Errorf("failed to sign userModule id: %v", err)
 	}
 }
 

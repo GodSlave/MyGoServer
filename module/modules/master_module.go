@@ -6,12 +6,10 @@ package modules
 import (
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/conf"
-	"github.com/GodSlave/MyGoServer/module/modules/master"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"github.com/GodSlave/MyGoServer/module"
@@ -74,7 +72,6 @@ type Master struct {
 	basemodule.BaseModule
 	app           module.App
 	listener      net.Listener
-	ProcessMap    map[string]*master.Process
 	ModuleReports map[string]*ModuleReport //moduleID -- ModuleReport
 	rwmutex       sync.RWMutex
 }
@@ -107,12 +104,6 @@ func (m *Master) OnInit(app module.App, settings *conf.ModuleSettings) {
 		}
 	}
 
-	m.ProcessMap = map[string]*master.Process{}
-	for _, psetting := range app.GetSettings().Master.Process {
-		ps := new(master.Process)
-		ps.Init(app.GetSettings().Master, psetting)
-		m.ProcessMap[psetting.ProcessID] = ps
-	}
 	m.GetServer().RegisterGO("HD_Start_Process", 1, m.startProcess)
 	m.GetServer().RegisterGO("HD_Stop_Process", 2, m.stopProcess)
 	m.GetServer().RegisterGO("ReportForm", 3, m.ReportForm)
@@ -179,32 +170,9 @@ func (m *Master) GetArgs(req *http.Request) map[string]string {
 */
 func (m *Master) ProcessList(w http.ResponseWriter, req *http.Request) {
 	req.BasicAuth()
-	args := m.GetArgs(req)
-	Host := args["host"]
-	ProcessID := args["pid"]
-	State := args["state"]
+
 	list := []map[string]interface{}{}
-	for _, process := range m.ProcessMap {
-		if Host != "" && Host != process.Process.Host {
-			continue
-		}
-		if ProcessID != "" && ProcessID != process.Process.ProcessID {
-			continue
-		}
-		if State != "" {
-			s, err := strconv.Atoi(State)
-			if err == nil {
-				if s != process.State {
-					continue
-				}
-			}
-		}
-		list = append(list, map[string]interface{}{
-			"State":     process.State,
-			"ProcessID": process.Process.ProcessID,
-			"Host":      process.Process.Host,
-		})
-	}
+
 	response := NewHttpResponse("success", list)
 	io.WriteString(w, response.String())
 }
@@ -247,27 +215,6 @@ func (m *Master) ModuleList(w http.ResponseWriter, req *http.Request) {
 刷新进程状态
 */
 func (m *Master) UpdateProcessState(w http.ResponseWriter, req *http.Request) {
-	args := m.GetArgs(req)
-	Host := args["host"]
-	ProcessID := args["pid"]
-	State := args["state"]
-	for _, process := range m.ProcessMap {
-		if Host != "" && Host != process.Process.Host {
-			continue
-		}
-		if ProcessID != "" && ProcessID != process.Process.ProcessID {
-			continue
-		}
-		if State != "" {
-			s, err := strconv.Atoi(State)
-			if err == nil {
-				if s != process.State {
-					continue
-				}
-			}
-		}
-		process.StateUpdate()
-	}
 	response := NewHttpResponse("success", "job run")
 	io.WriteString(w, response.String())
 }
@@ -283,15 +230,6 @@ func (m *Master) StartProcess(w http.ResponseWriter, req *http.Request) {
 		response := NewErrorResponse("fail", "You must specify host or ProcessID")
 		io.WriteString(w, response.String())
 		return
-	}
-	for _, process := range m.ProcessMap {
-		if Host != "" && Host != process.Process.Host {
-			continue
-		}
-		if ProcessID != "" && ProcessID != process.Process.ProcessID {
-			continue
-		}
-		process.Start()
 	}
 	response := NewHttpResponse("success", "job run")
 	io.WriteString(w, response.String())
@@ -309,15 +247,6 @@ func (m *Master) StopProcess(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, response.String())
 		return
 	}
-	for _, process := range m.ProcessMap {
-		if Host != "" && Host != process.Process.Host {
-			continue
-		}
-		if ProcessID != "" && ProcessID != process.Process.ProcessID {
-			continue
-		}
-		process.Stop()
-	}
 	response := NewHttpResponse("success", "job run")
 	io.WriteString(w, response.String())
 }
@@ -331,13 +260,6 @@ func (m *Master) OnDestroy() {
 根据ProcessID 启动一个远程进程
 */
 func (m *Master) startProcess(s map[string]interface{}, msg map[string]interface{}) (result string, err string) {
-	ProcessID := msg["ProcessID"].(string)
-	if Process, ok := m.ProcessMap[ProcessID]; ok {
-		_, err = Process.Start()
-		result = "执行了启动命令"
-	} else {
-		err = "配置文件中没有这个进程"
-	}
 
 	return
 }
@@ -346,13 +268,6 @@ func (m *Master) startProcess(s map[string]interface{}, msg map[string]interface
 根据ProcessID 启动一个远程进程
 */
 func (m *Master) stopProcess(s map[string]interface{}, msg map[string]interface{}) (result string, err string) {
-	ProcessID := msg["ProcessID"].(string)
-	if Process, ok := m.ProcessMap[ProcessID]; ok {
-		_, err = Process.Stop()
-		result = "执行了停止命令"
-	} else {
-		err = "配置文件中没有这个进程"
-	}
 
 	return
 }

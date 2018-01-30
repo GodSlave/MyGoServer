@@ -25,7 +25,7 @@ const (
 	CertAlgoED25519v01  = "ssh-ed25519-cert-v01@openssh.com"
 )
 
-// Certificate types distinguish between host and user
+// Certificate types distinguish between host and userModule
 // certificates. The values can be set in the CertType field of
 // Certificate.
 const (
@@ -248,7 +248,7 @@ const sourceAddressCriticalOption = "source-address"
 type CertChecker struct {
 	// SupportedCriticalOptions lists the CriticalOptions that the
 	// server application layer understands. These are only used
-	// for user certificates.
+	// for userModule certificates.
 	SupportedCriticalOptions []string
 
 	// IsAuthority should return true if the key is recognized as
@@ -262,7 +262,7 @@ type CertChecker struct {
 
 	// UserKeyFallback is called when CertChecker.Authenticate encounters a
 	// public key that is not a certificate. It must implement validation
-	// of user keys or else, if nil, all such keys are rejected.
+	// of userModule keys or else, if nil, all such keys are rejected.
 	UserKeyFallback func(conn ConnMetadata, key PublicKey) (*Permissions, error)
 
 	// HostKeyFallback is called when CertChecker.CheckHostKey encounters a
@@ -294,7 +294,7 @@ func (c *CertChecker) CheckHostKey(addr string, remote net.Addr, key PublicKey) 
 	return c.CheckCert(addr, cert)
 }
 
-// Authenticate checks a user certificate. Authenticate can be used as
+// Authenticate checks a userModule certificate. Authenticate can be used as
 // a value for ServerConfig.PublicKeyCallback.
 func (c *CertChecker) Authenticate(conn ConnMetadata, pubKey PublicKey) (*Permissions, error) {
 	cert, ok := pubKey.(*Certificate)

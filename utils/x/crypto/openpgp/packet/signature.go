@@ -317,7 +317,7 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 			return
 		}
 		if len(subpacket) != 1 {
-			err = errors.StructuralError("primary user id subpacket with bad length")
+			err = errors.StructuralError("primary userModule id subpacket with bad length")
 			return
 		}
 		sig.IsPrimaryId = new(bool)

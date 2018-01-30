@@ -24,7 +24,7 @@ import (
 )
 
 type LocalClient struct {
-	//callinfos map[string]*ClinetCallInfo
+	//callInfos map[string]*ClinetCallInfo
 	callinfos    *utils.BeeMap
 	cmutex       sync.Mutex //操作callinfos的锁
 	local_server mqrpc.LocalServer
@@ -50,7 +50,7 @@ func NewLocalClient(server mqrpc.LocalServer) (*LocalClient, error) {
 
 func (c *LocalClient) Done() error {
 	//关闭amqp链接通道
-	//清理 callinfos 列表
+	//清理 callInfos 列表
 	for key, clinetCallInfo := range c.callinfos.Items() {
 		if clinetCallInfo != nil {
 			//关闭管道

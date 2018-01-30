@@ -9,9 +9,10 @@ import (
 	"github.com/GodSlave/MyGoServer/module/gate"
 	"github.com/GodSlave/MyGoServer/utils/aes"
 	"encoding/json"
-	"github.com/GodSlave/MyGoServer/module/user"
+	"github.com/GodSlave/MyGoServer/module/userModule"
 	"strconv"
 	"testing"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 func InitClient() *service.Client {
@@ -23,7 +24,7 @@ func InitClient() *service.Client {
 	msg.SetCleanSession(true)
 	msg.SetVersion(0x4)
 	id := uuid.SafeString(33);
-	fmt.Println(id)
+	log.Info(id)
 	msg.SetClientId([]byte(id))
 	msg.SetKeepAlive(10)
 
@@ -114,7 +115,7 @@ func SubI(client *service.Client, checkChan chan *gate.AllResponse) error {
 
 func LoginI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
 	fmt.Println("start login")
-	login := &user.User_Login_Request{
+	login := &userModule.User_Login_Request{
 		Username: user1.Name,
 		Password: user1.Password,
 	}
@@ -182,4 +183,16 @@ func SendMessage(c *service.Client, checkChan chan *gate.AllResponse, publishMes
 	allrespon = <-checkChan
 	fmt.Println("Get Response", strconv.Itoa(int(allrespon.State))+"  "+allrespon.Msg)
 	return err, allrespon
+}
+
+func SendMessageWithCheck(c *service.Client, checkChan chan *gate.AllResponse, publishMessage *message.PublishMessage, t *testing.T) (response *gate.AllResponse) {
+	err, respons1 := SendMessage(c, checkChan, publishMessage)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if respons1.State != 0 {
+		t.Failed()
+	}
+	t.Log(string(respons1.Result))
+	return respons1
 }

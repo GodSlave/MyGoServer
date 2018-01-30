@@ -22,6 +22,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc/pb"
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/base"
+	"math"
 )
 
 type StatisticalMethod struct {
@@ -100,23 +101,6 @@ func (m *BaseModule) GetModuleSettings() *conf.ModuleSettings {
 func (m *BaseModule) GetRouteServers(moduleType string, hash string) (s module.ServerSession, err error) {
 	return m.App.GetRouteServers(moduleType, hash)
 }
-
-//func (m *BaseModule) RpcInvoke(moduleType string, _func string, params ...interface{}) (result interface{}, err *base.ErrorCode) {
-//	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
-//	if e != nil {
-//		err = base.NewError(404, e.Error())
-//		return
-//	}
-//	return server.Call(_func, params...)
-//}
-//
-//func (m *BaseModule) RpcInvokeNR(moduleType string, _func string, params ...interface{}) (err error) {
-//	server, err := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
-//	if err != nil {
-//		return
-//	}
-//	return server.CallNR(_func, params...)
-//}
 
 func (m *BaseModule) RpcInvokeArgs(moduleType string, _func string, SessionID string, args []byte) (result interface{}, err *base.ErrorCode) {
 	server, e := m.App.GetRouteServers(moduleType, m.subclass.GetServerId())
@@ -215,7 +199,10 @@ func (m *BaseModule) OnComplete(fn string, callInfo *mqrpc.CallInfo, result *rpc
 	}
 }
 func (m *BaseModule) GetExecuting() int64 {
-	return m.GetServer().GetRPCServer().GetExecuting()
+	//if m.GetServer().GetRPCServer() != nil {
+	//	return m.GetServer().GetRPCServer().GetExecuting()
+	//}
+	return 0
 }
 func (m *BaseModule) GetStatistical() (statistical string, err error) {
 	m.rwmutex.RLock()
@@ -230,15 +217,15 @@ func (m *BaseModule) GetStatistical() (statistical string, err error) {
 	}
 
 	//重置
-	//for _,s:=range m.statistical{
-	//	s.StartTime=now
-	//	s.ExecFailure=0
-	//	s.ExecSuccess=0
-	//	s.ExecTimeout=0
-	//	s.ExecTotal=0
-	//	s.MaxExecTime=0
-	//	s.MinExecTime=math.MaxInt64
-	//}
+	for _, s := range m.statistical {
+		s.StartTime = now
+		s.ExecFailure = 0
+		s.ExecSuccess = 0
+		s.ExecTimeout = 0
+		s.ExecTotal = 0
+		s.MaxExecTime = 0
+		s.MinExecTime = math.MaxInt64
+	}
 	m.rwmutex.RUnlock()
 	return
 }

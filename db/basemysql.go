@@ -17,8 +17,8 @@ func (sql *BaseSql) InitDB() {
 	var err error
 	engine, err = xorm.NewEngine("mysql", sql.Url)
 	logger := xorm.NewSimpleLogger(sql)
-	logger.Debug()
-	engine.ShowSQL(true)
+	logger.Error()
+	engine.ShowSQL(false)
 	if err == nil {
 		sql.Engine = engine
 	} else {

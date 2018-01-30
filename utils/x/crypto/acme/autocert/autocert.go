@@ -170,7 +170,7 @@ type Manager struct {
 //
 // If m.HostPolicy is non-nil, GetCertificate calls the policy before requesting
 // a new cert. A non-nil error returned from m.HostPolicy halts TLS negotiation.
-// The error is propagated back to the caller of GetCertificate and is user-visible.
+// The error is propagated back to the caller of GetCertificate and is userModule-visible.
 // This does not affect cached certs. See HostPolicy field description for more details.
 func (m *Manager) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	name := hello.ServerName

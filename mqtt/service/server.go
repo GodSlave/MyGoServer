@@ -312,7 +312,7 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		return nil, err
 	}
 
-	// Authenticate the user, if error, return error and exit
+	// Authenticate the userModule, if error, return error and exit
 	if err = this.authMgr.Authenticate(string(req.Username()), string(req.Password()), string(req.ClientId())); err != nil {
 		resp.SetReturnCode(message.ErrBadUsernameOrPassword)
 		resp.SetSessionPresent(false)

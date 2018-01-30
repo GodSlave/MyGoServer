@@ -22,7 +22,7 @@ func TestParseUserAttribute(t *testing.T) {
 		uat := p.(*UserAttribute)
 		imgs := uat.ImageData()
 		if len(imgs) != 1 {
-			t.Errorf("Unexpected number of images in user attribute packet: %d", len(imgs))
+			t.Errorf("Unexpected number of images in userModule attribute packet: %d", len(imgs))
 		}
 		if len(imgs[0]) != 3395 {
 			t.Errorf("Unexpected JPEG image size: %d", len(imgs[0]))
@@ -40,7 +40,7 @@ func TestParseUserAttribute(t *testing.T) {
 		w := bytes.NewBuffer(nil)
 		err = uat.Serialize(w)
 		if err != nil {
-			t.Errorf("Error writing user attribute: %v", err)
+			t.Errorf("Error writing userModule attribute: %v", err)
 		}
 		r = bytes.NewBuffer(w.Bytes())
 	}

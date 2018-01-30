@@ -14,15 +14,15 @@ import (
 
 const UserAttrImageSubpacket = 1
 
-// UserAttribute is capable of storing other types of data about a user
-// beyond name, email and a text comment. In practice, user attributes are typically used
-// to store a signed thumbnail photo JPEG image of the user.
+// UserAttribute is capable of storing other types of data about a userModule
+// beyond name, email and a text comment. In practice, userModule attributes are typically used
+// to store a signed thumbnail photo JPEG image of the userModule.
 // See RFC 4880, section 5.12.
 type UserAttribute struct {
 	Contents []*OpaqueSubpacket
 }
 
-// NewUserAttributePhoto creates a user attribute packet
+// NewUserAttributePhoto creates a userModule attribute packet
 // containing the given images.
 func NewUserAttributePhoto(photos ...image.Image) (uat *UserAttribute, err error) {
 	uat = new(UserAttribute)
@@ -49,7 +49,7 @@ func NewUserAttributePhoto(photos ...image.Image) (uat *UserAttribute, err error
 	return
 }
 
-// NewUserAttribute creates a new user attribute packet containing the given subpackets.
+// NewUserAttribute creates a new userModule attribute packet containing the given subpackets.
 func NewUserAttribute(contents ...*OpaqueSubpacket) *UserAttribute {
 	return &UserAttribute{Contents: contents}
 }
@@ -64,7 +64,7 @@ func (uat *UserAttribute) parse(r io.Reader) (err error) {
 	return
 }
 
-// Serialize marshals the user attribute to w in the form of an OpenPGP packet, including
+// Serialize marshals the userModule attribute to w in the form of an OpenPGP packet, including
 // header.
 func (uat *UserAttribute) Serialize(w io.Writer) (err error) {
 	var buf bytes.Buffer
@@ -80,7 +80,7 @@ func (uat *UserAttribute) Serialize(w io.Writer) (err error) {
 
 // ImageData returns zero or more byte slices, each containing
 // JPEG File Interchange Format (JFIF), for each photo in the
-// the user attribute packet.
+// the userModule attribute packet.
 func (uat *UserAttribute) ImageData() (imageData [][]byte) {
 	for _, sp := range uat.Contents {
 		if sp.SubType == UserAttrImageSubpacket && len(sp.Contents) > 16 {

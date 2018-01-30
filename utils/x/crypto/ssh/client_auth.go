@@ -13,7 +13,7 @@ import (
 
 // clientAuthenticate authenticates with the remote server. See RFC 4252.
 func (c *connection) clientAuthenticate(config *ClientConfig) error {
-	// initiate user auth session
+	// initiate userModule auth session
 	if err := c.transport.writePacket(Marshal(&serviceRequestMsg{serviceUserAuth})); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func keys(m map[string]bool) []string {
 
 // An AuthMethod represents an instance of an RFC 4252 authentication method.
 type AuthMethod interface {
-	// auth authenticates user over transport t.
+	// auth authenticates userModule over transport t.
 	// Returns true if authentication is successful.
 	// If authentication is not successful, a []string of alternative
 	// method names is returned. If the slice is nil, it will be ignored
@@ -108,7 +108,7 @@ func (n *noneAuth) method() string {
 }
 
 // passwordCallback is an AuthMethod that fetches the password through
-// a function call, e.g. by prompting the user.
+// a function call, e.g. by prompting the userModule.
 type passwordCallback func() (password string, err error)
 
 func (cb passwordCallback) auth(session []byte, user string, c packetConn, rand io.Reader) (bool, []string, error) {
@@ -122,7 +122,7 @@ func (cb passwordCallback) auth(session []byte, user string, c packetConn, rand 
 
 	pw, err := cb()
 	// REVIEW NOTE: is there a need to support skipping a password attempt?
-	// The program may only find out that the user doesn't have a password
+	// The program may only find out that the userModule doesn't have a password
 	// when prompting.
 	if err != nil {
 		return false, nil, err
@@ -272,7 +272,7 @@ func confirmKeyAck(key PublicKey, c packetConn) (bool, error) {
 		}
 		switch packet[0] {
 		case msgUserAuthBanner:
-			// TODO(gpaul): add callback to present the banner to the user
+			// TODO(gpaul): add callback to present the banner to the userModule
 		case msgUserAuthPubKeyOk:
 			var msg userAuthPubKeyOkMsg
 			if err := Unmarshal(packet, &msg); err != nil {
@@ -314,7 +314,7 @@ func handleAuthResponse(c packetConn) (bool, []string, error) {
 
 		switch packet[0] {
 		case msgUserAuthBanner:
-			// TODO: add callback to present the banner to the user
+			// TODO: add callback to present the banner to the userModule
 		case msgUserAuthFailure:
 			var msg userAuthFailureMsg
 			if err := Unmarshal(packet, &msg); err != nil {
@@ -333,7 +333,7 @@ func handleAuthResponse(c packetConn) (bool, []string, error) {
 // disabling echoing (e.g. for passwords), and return all the answers.
 // Challenge may be called multiple times in a single session. After
 // successful authentication, the server may send a challenge with no
-// questions, for which the user and instruction messages should be
+// questions, for which the userModule and instruction messages should be
 // printed.  RFC 4256 section 3.3 details how the UI should behave for
 // both CLI and GUI environments.
 type KeyboardInteractiveChallenge func(user, instruction string, questions []string, echos []bool) (answers []string, err error)
@@ -464,12 +464,12 @@ func (r *retryableAuthMethod) method() string {
 // If maxTries is <= 0, will retry indefinitely
 //
 // This is useful for interactive clients using challenge/response type
-// authentication (e.g. Keyboard-Interactive, Password, etc) where the user
+// authentication (e.g. Keyboard-Interactive, Password, etc) where the userModule
 // could mistype their response resulting in the server issuing a
 // SSH_MSG_USERAUTH_FAILURE (rfc4252 #8 [password] and rfc4256 #3.4
 // [keyboard-interactive]); Without this decorator, the non-retryable
 // AuthMethod would be removed from future consideration, and never tried again
-// (and so the user would never be able to retry their entry).
+// (and so the userModule would never be able to retry their entry).
 func RetryableAuthMethod(auth AuthMethod, maxTries int) AuthMethod {
 	return &retryableAuthMethod{authMethod: auth, maxTries: maxTries}
 }

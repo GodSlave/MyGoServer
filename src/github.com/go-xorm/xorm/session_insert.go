@@ -89,7 +89,7 @@ func (session *Session) innerInsertMulti(rowsSlicePtr interface{}) (int64, error
 		var colPlaces []string
 
 		// handle BeforeInsertProcessor
-		// !nashtsai! does user expect it's same slice to passed closure when using Before()/After() when insert multi??
+		// !nashtsai! does userModule expect it's same slice to passed closure when using Before()/After() when insert multi??
 		for _, closure := range session.beforeClosures {
 			closure(elemValue)
 		}
@@ -250,7 +250,7 @@ func (session *Session) innerInsertMulti(rowsSlicePtr interface{}) (int64, error
 
 		// handle AfterInsertProcessor
 		if session.isAutoCommit {
-			// !nashtsai! does user expect it's same slice to passed closure when using Before()/After() when insert multi??
+			// !nashtsai! does userModule expect it's same slice to passed closure when using Before()/After() when insert multi??
 			for _, closure := range session.afterClosures {
 				closure(elemValue)
 			}

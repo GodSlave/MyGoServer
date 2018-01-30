@@ -882,7 +882,7 @@ func parseOpenSSHPrivateKey(key []byte) (*ed25519.PrivateKey, error) {
 	return &pk, nil
 }
 
-// FingerprintLegacyMD5 returns the user presentation of the key's
+// FingerprintLegacyMD5 returns the userModule presentation of the key's
 // fingerprint as described by RFC 4716 section 4.
 func FingerprintLegacyMD5(pubKey PublicKey) string {
 	md5sum := md5.Sum(pubKey.Marshal())
@@ -893,7 +893,7 @@ func FingerprintLegacyMD5(pubKey PublicKey) string {
 	return strings.Join(hexarray, ":")
 }
 
-// FingerprintSHA256 returns the user presentation of the key's
+// FingerprintSHA256 returns the userModule presentation of the key's
 // fingerprint as unpadded base64 encoded sha256 hash.
 // This format was introduced from OpenSSH 6.8.
 // https://www.openssh.com/txt/release-6.8

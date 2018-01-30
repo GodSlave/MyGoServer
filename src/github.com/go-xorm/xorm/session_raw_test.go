@@ -21,7 +21,7 @@ func TestQuery(t *testing.T) {
 
 	assert.NoError(t, testEngine.Sync(new(UserinfoQuery)))
 
-	res, err := testEngine.Exec("INSERT INTO `userinfo_query` (uid, name) VALUES (?, ?)", 1, "user")
+	res, err := testEngine.Exec("INSERT INTO `userinfo_query` (uid, name) VALUES (?, ?)", 1, "userModule")
 	assert.NoError(t, err)
 	cnt, err := res.RowsAffected()
 	assert.NoError(t, err)
@@ -33,5 +33,5 @@ func TestQuery(t *testing.T) {
 	id, err := strconv.Atoi(string(results[0]["uid"]))
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, id)
-	assert.Equal(t, "user", string(results[0]["name"]))
+	assert.Equal(t, "userModule", string(results[0]["name"]))
 }

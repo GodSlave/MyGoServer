@@ -60,7 +60,7 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%d %s: %s", e.StatusCode, e.ProblemType, e.Detail)
 }
 
-// Account is a user account. It is associated with a private key.
+// Account is a userModule account. It is associated with a private key.
 type Account struct {
 	// URI is the account unique ID, which is also a URL used to retrieve
 	// account data from the CA.
@@ -69,8 +69,8 @@ type Account struct {
 	// Contact is a slice of contact info used during registration.
 	Contact []string
 
-	// The terms user has agreed to.
-	// A value not matching CurrentTerms indicates that the user hasn't agreed
+	// The terms userModule has agreed to.
+	// A value not matching CurrentTerms indicates that the userModule hasn't agreed
 	// to the actual Terms of Service of the CA.
 	AgreedTerms string
 

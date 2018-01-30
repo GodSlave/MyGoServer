@@ -28,7 +28,7 @@ func TestTimeUserTime(t *testing.T) {
 		OperTime: time.Now(),
 	}
 
-	fmt.Println("user", user.OperTime)
+	fmt.Println("userModule", user.OperTime)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestTimeUserTimeDiffLoc(t *testing.T) {
 		OperTime: time.Now(),
 	}
 
-	fmt.Println("user", user.OperTime)
+	fmt.Println("userModule", user.OperTime)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -93,7 +93,7 @@ func TestTimeUserCreated(t *testing.T) {
 		Id: "lunny",
 	}
 
-	fmt.Println("user", user.CreatedAt)
+	fmt.Println("userModule", user.CreatedAt)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -128,7 +128,7 @@ func TestTimeUserCreatedDiffLoc(t *testing.T) {
 		Id: "lunny",
 	}
 
-	fmt.Println("user", user.CreatedAt)
+	fmt.Println("userModule", user.CreatedAt)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -158,7 +158,7 @@ func TestTimeUserUpdated(t *testing.T) {
 		Id: "lunny",
 	}
 
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -215,7 +215,7 @@ func TestTimeUserUpdatedDiffLoc(t *testing.T) {
 		Id: "lunny",
 	}
 
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt)
 
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
@@ -270,7 +270,7 @@ func TestTimeUserDeleted(t *testing.T) {
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, cnt)
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
 
 	var user2 UserDeleted
 	has, err := testEngine.Get(&user2)
@@ -323,7 +323,7 @@ func TestTimeUserDeletedDiffLoc(t *testing.T) {
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, cnt)
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
 
 	var user2 UserDeleted2
 	has, err := testEngine.Get(&user2)
@@ -394,7 +394,7 @@ func TestCustomTimeUserDeleted(t *testing.T) {
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, cnt)
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
 
 	var user2 UserDeleted3
 	has, err := testEngine.Get(&user2)
@@ -447,7 +447,7 @@ func TestCustomTimeUserDeletedDiffLoc(t *testing.T) {
 	cnt, err := testEngine.Insert(&user)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, cnt)
-	fmt.Println("user", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
+	fmt.Println("userModule", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
 
 	var user2 UserDeleted4
 	has, err := testEngine.Get(&user2)

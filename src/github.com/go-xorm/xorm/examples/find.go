@@ -8,7 +8,7 @@ import (
 	"github.com/go-xorm/xorm"
 )
 
-// User describes a user
+// User describes a userModule
 type User struct {
 	Id      int64
 	Name    string

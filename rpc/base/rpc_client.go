@@ -41,6 +41,9 @@ func NewRPCClient(app module.App, serverId string) (mqrpc.RPCClient, error) {
 	return rpc_client, nil
 }
 
+
+
+
 func (c *RPCClient) NewRabbitmqClient(info *conf.Rabbitmq) (err error) {
 	//创建本地连接
 	if info != nil && c.remote_client == nil {

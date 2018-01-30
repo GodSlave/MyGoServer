@@ -30,7 +30,7 @@ import (
 )
 
 type AMQPClient struct {
-	//callinfos map[string]*ClinetCallInfo
+	//callInfos map[string]*ClinetCallInfo
 	callinfos *utils.BeeMap
 	cmutex    sync.Mutex //操作callinfos的锁
 	Consumer  *Consumer
@@ -94,7 +94,7 @@ func NewAMQPClient(info *conf.Rabbitmq) (client *AMQPClient, err error) {
 func (c *AMQPClient) Done() (err error) {
 	//关闭amqp链接通道
 	err = c.Consumer.Shutdown()
-	//清理 callinfos 列表
+	//清理 callInfos 列表
 	for key, clinetCallInfo := range c.callinfos.Items() {
 		if clinetCallInfo != nil {
 			//关闭管道

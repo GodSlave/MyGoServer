@@ -439,7 +439,7 @@ func (c *Conversation) Receive(in []byte) (out []byte, encrypted bool, change Se
 	return
 }
 
-// Send takes a human readable message from the local user, possibly encrypts
+// Send takes a human readable message from the local userModule, possibly encrypts
 // it and returns zero one or more messages to send to the peer.
 func (c *Conversation) Send(msg []byte) ([][]byte, error) {
 	switch c.state {

@@ -1,0 +1,44 @@
+{
+  "Debug": true,
+  "OnlineLimit": 8000,
+  "Name": "master",
+  "Master": {
+    //是否启动Master功能,如果为true,进程会每个三秒向Master模块汇报其所在模块运行信息
+    "ISRealMaster": true,
+    //记录统计信息
+    "SQlUrl": "develop:Woaini123!@tcp(192.168.0.74:3306)/statistic?charset=utf8",
+    "RedisUrl": "redis://192.168.0.74:6379/2",
+    "RedisPubSubConf":{
+      "Uri": "redis://192.168.0.74:6379/2",
+      "Queue":"APPTrans"
+    },
+    //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
+    "MasterType": "Master"
+  },
+  "Module": {
+    "Gate": [
+      {
+        //Id在整个Module中必须唯一,不能重复
+        "Id": "Gate001",
+        //不同模块分别分配一个byteID 但是该模块多个实例必须用该id标识
+        "ByteId": 1,
+        //这个模块所属进程,非常重要,进程会根据该参数来判断是否需要运行该模块 [development]为默认值代表开发环境
+        "ProcessID": "development",
+        "Settings": {
+          "TCPAddr": "tcp://0.0.0.0:1883"
+        }
+      }
+    ]
+  },
+  "Rpc": {
+    // 远程访问最后期限值 单位秒 这个值指定了在客户端可以等待服务端多长时间来应答
+    "RpcExpired": 3
+  },
+  "DB": {
+    "DBtype": "mysql",
+    "SQL": "develop:Woaini123!@tcp(192.168.0.74:3306)/gameserver?charset=utf8",
+    "Redis": "redis://192.168.0.74:6379/1"
+  },
+  //是否启用加密传输
+  "Secret": true
+}

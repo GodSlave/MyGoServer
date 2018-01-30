@@ -171,7 +171,7 @@ func ExamplePublicKeys() {
 	//
 	// If you have an encrypted private key, the crypto/x509 package
 	// can be used to decrypt it.
-	key, err := ioutil.ReadFile("/home/user/.ssh/id_rsa")
+	key, err := ioutil.ReadFile("/home/userModule/.ssh/id_rsa")
 	if err != nil {
 		log.Fatalf("unable to read private key: %v", err)
 	}
@@ -183,7 +183,7 @@ func ExamplePublicKeys() {
 	}
 
 	config := &ssh.ClientConfig{
-		User: "user",
+		User: "userModule",
 		Auth: []ssh.AuthMethod{
 			// Use the PublicKeys method for remote authentication.
 			ssh.PublicKeys(signer),

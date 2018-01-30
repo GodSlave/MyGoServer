@@ -1,6 +1,6 @@
 syntax = "proto3";
 package Dolphin.Protocol;
-option go_package = "../module/user";
+option go_package = "../module/userModule";
 
 
 message UserTokenData {
@@ -54,6 +54,7 @@ message User_GetSelfInfo_Response {
 }
 
 message User_LogOut_Request {
+
 }
 
 message User_LogOut_Response {

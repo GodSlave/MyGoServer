@@ -362,12 +362,12 @@ EachPacket:
 
 				sig, ok := p.(*packet.Signature)
 				if !ok {
-					return nil, errors.StructuralError("user ID packet not followed by self-signature")
+					return nil, errors.StructuralError("userModule ID packet not followed by self-signature")
 				}
 
 				if (sig.SigType == packet.SigTypePositiveCert || sig.SigType == packet.SigTypeGenericCert) && sig.IssuerKeyId != nil && *sig.IssuerKeyId == e.PrimaryKey.KeyId {
 					if err = e.PrimaryKey.VerifyUserIdSignature(pkt.Id, e.PrimaryKey, sig); err != nil {
-						return nil, errors.StructuralError("user ID self-signature invalid: " + err.Error())
+						return nil, errors.StructuralError("userModule ID self-signature invalid: " + err.Error())
 					}
 					current.SelfSignature = sig
 					break
@@ -382,7 +382,7 @@ EachPacket:
 				// directly on keys (eg. to bind additional
 				// revocation keys).
 			} else if current == nil {
-				return nil, errors.StructuralError("signature packet found before user id packet")
+				return nil, errors.StructuralError("signature packet found before userModule id packet")
 			} else {
 				current.Signatures = append(current.Signatures, pkt)
 			}
@@ -469,7 +469,7 @@ func NewEntity(name, comment, email string, config *packet.Config) (*Entity, err
 
 	uid := packet.NewUserId(name, comment, email)
 	if uid == nil {
-		return nil, errors.InvalidArgumentError("user id field contained invalid characters")
+		return nil, errors.InvalidArgumentError("userModule id field contained invalid characters")
 	}
 	signingPriv, err := rsa.GenerateKey(config.Random(), bits)
 	if err != nil {
@@ -502,7 +502,7 @@ func NewEntity(name, comment, email string, config *packet.Config) (*Entity, err
 		},
 	}
 
-	// If the user passes in a DefaultHash via packet.Config,
+	// If the userModule passes in a DefaultHash via packet.Config,
 	// set the PreferredHash for the SelfSignature.
 	if config != nil && config.DefaultHash != 0 {
 		e.Identities[uid.Id].SelfSignature.PreferredHash = []uint8{hashToHashId(config.DefaultHash)}

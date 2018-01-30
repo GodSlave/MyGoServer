@@ -30,10 +30,10 @@ type User struct {
 func init() {
 	switch dbtype {
 	case "sqlite3":
-		createTableSql = "CREATE TABLE IF NOT EXISTS `user` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NULL, " +
+		createTableSql = "CREATE TABLE IF NOT EXISTS `userModule` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NULL, " +
 			"`title` TEXT NULL, `age` FLOAT NULL, `alias` TEXT NULL, `nick_name` TEXT NULL, `created` datetime);"
 	case "mysql":
-		createTableSql = "CREATE TABLE IF NOT EXISTS `user` (`id` INTEGER PRIMARY KEY AUTO_INCREMENT NOT NULL, `name` TEXT NULL, " +
+		createTableSql = "CREATE TABLE IF NOT EXISTS `userModule` (`id` INTEGER PRIMARY KEY AUTO_INCREMENT NOT NULL, `name` TEXT NULL, " +
 			"`title` TEXT NULL, `age` FLOAT NULL, `alias` TEXT NULL, `nick_name` TEXT NULL, `created` datetime);"
 	default:
 		panic("no db type")
@@ -66,7 +66,7 @@ func BenchmarkOriQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?, ?)",
+		_, err = db.Exec("insert into userModule (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?, ?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -76,7 +76,7 @@ func BenchmarkOriQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -111,7 +111,7 @@ func BenchmarkStructQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?, ?)",
+		_, err = db.Exec("insert into userModule (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?, ?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -121,7 +121,7 @@ func BenchmarkStructQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -156,7 +156,7 @@ func BenchmarkStruct2Query(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (`name`, title, age, alias, nick_name, created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -167,7 +167,7 @@ func BenchmarkStruct2Query(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -202,7 +202,7 @@ func BenchmarkSliceInterfaceQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (`name`, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (`name`, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -212,7 +212,7 @@ func BenchmarkSliceInterfaceQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -254,7 +254,7 @@ func BenchmarkSliceInterfaceQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -264,7 +264,7 @@ func BenchmarkSliceInterfaceQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -305,7 +305,7 @@ func BenchmarkSliceStringQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (name, title, age, alias, nick_name, created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (name, title, age, alias, nick_name, created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -315,7 +315,7 @@ func BenchmarkSliceStringQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -356,7 +356,7 @@ func BenchmarkMapInterfaceQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -366,7 +366,7 @@ func BenchmarkMapInterfaceQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -402,7 +402,7 @@ func BenchmarkMapInterfaceQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -412,7 +412,7 @@ func BenchmarkMapInterfaceQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -449,7 +449,7 @@ func BenchmarkMapStringQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 50; i++ {
-		_, err = db.Exec("insert into user (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (name, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -459,7 +459,7 @@ func BenchmarkMapStringQuery(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query("select * from user")
+		rows, err := db.Query("select * from userModule")
 		if err != nil {
 			b.Error(err)
 		}
@@ -497,7 +497,7 @@ func BenchmarkExec(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err = db.Exec("insert into user (`name`, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
+		_, err = db.Exec("insert into userModule (`name`, title, age, alias, nick_name,created) values (?,?,?,?,?,?)",
 			"xlw", "tester", 1.2, "lunny", "lunny xiao", time.Now())
 		if err != nil {
 			b.Error(err)
@@ -531,7 +531,7 @@ func BenchmarkExecMap(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err = db.ExecMap("insert into user (`name`, title, age, alias, nick_name, created) "+
+		_, err = db.ExecMap("insert into userModule (`name`, title, age, alias, nick_name, created) "+
 			"values (?name,?title,?age,?alias,?nick_name,?created)",
 			&mp)
 		if err != nil {
@@ -561,14 +561,14 @@ func TestExecMap(t *testing.T) {
 		"created":   time.Now(),
 	}
 
-	_, err = db.ExecMap("insert into user (`name`, title, age, alias, nick_name,created) "+
+	_, err = db.ExecMap("insert into userModule (`name`, title, age, alias, nick_name,created) "+
 		"values (?name,?title,?age,?alias,?nick_name,?created)",
 		&mp)
 	if err != nil {
 		t.Error(err)
 	}
 
-	rows, err := db.Query("select * from user")
+	rows, err := db.Query("select * from userModule")
 	if err != nil {
 		t.Error(err)
 	}
@@ -603,14 +603,14 @@ func TestExecStruct(t *testing.T) {
 		Created:  NullTime(time.Now()),
 	}
 
-	_, err = db.ExecStruct("insert into user (`name`, title, age, alias, nick_name,created) "+
+	_, err = db.ExecStruct("insert into userModule (`name`, title, age, alias, nick_name,created) "+
 		"values (?Name,?Title,?Age,?Alias,?NickName,?Created)",
 		&user)
 	if err != nil {
 		t.Error(err)
 	}
 
-	rows, err := db.QueryStruct("select * from user where `name` = ?Name", &user)
+	rows, err := db.QueryStruct("select * from userModule where `name` = ?Name", &user)
 	if err != nil {
 		t.Error(err)
 	}
@@ -649,7 +649,7 @@ func BenchmarkExecStruct(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_, err = db.ExecStruct("insert into user (`name`, title, age, alias, nick_name,created) "+
+		_, err = db.ExecStruct("insert into userModule (`name`, title, age, alias, nick_name,created) "+
 			"values (?Name,?Title,?Age,?Alias,?NickName,?Created)",
 			&user)
 		if err != nil {

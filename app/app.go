@@ -3,8 +3,6 @@ package app
 import (
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/conf"
-	"hash/crc32"
-	"math"
 	"os/exec"
 	"os"
 	"path/filepath"
@@ -13,7 +11,6 @@ import (
 	"github.com/GodSlave/MyGoServer/log"
 	"github.com/GodSlave/MyGoServer/module/base"
 	"github.com/GodSlave/MyGoServer/module/modules"
-	"os/signal"
 	"github.com/GodSlave/MyGoServer/rpc/base"
 	"github.com/GodSlave/MyGoServer/rpc"
 	"strings"
@@ -23,6 +20,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils"
 	"time"
+	"github.com/GodSlave/MyGoServer/master"
+	"os/signal"
 )
 
 type DefaultApp struct {
@@ -41,6 +40,9 @@ type DefaultApp struct {
 	psc               *redis.PubSubConn
 	userManager       module.UserManager
 	initDownCallback  module.OnInitDownCallBack
+	masterServer      master.Master
+	masterClient      master.MasterClient
+	moduleManger      *basemodule.ModuleManager
 }
 
 func NewApp() module.App {
@@ -50,23 +52,21 @@ func NewApp() module.App {
 	newApp.byteServerList = map[byte]module.ServerSession{}
 	newApp.serverList = map[string]module.ServerSession{}
 	newApp.defaultRoutes = func(app module.App, Type string, hash string) module.ServerSession {
-		servers := app.GetServersByType(Type)
-		if len(servers) == 0 {
-			log.Error("no smodule find %s", Type)
-			return nil
+		if newApp.masterClient != nil {
+			serverSession := newApp.masterClient.GetModule(Type)
+			if serverSession != nil {
+				return *serverSession
+			}
 		}
-		index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
-		return servers[index]
+		return nil
 	}
 
 	newApp.byteDefaultRoutes = func(app module.App, Type byte, hash string) module.ServerSession {
-		servers := app.GetServersByByteType(Type)
-		if len(servers) == 0 {
-			log.Error("no module find %v", Type)
-			return nil
+		log.Error("new call  ")
+		if newApp.masterClient != nil {
+			return *newApp.masterClient.GetModuleByByte(Type)
 		}
-		index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
-		return servers[index]
+		return nil
 	}
 
 	newApp.rpcserializes = map[string]module.RPCSerialize{}
@@ -109,6 +109,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	sql := db.BaseSql{
 	}
 	sql.Url = conf.Conf.DB.SQL
+	log.Info(sql.Url)
 	sql.InitDB()
 	sql.CheckMigrate()
 	app.Engine = sql.Engine
@@ -118,20 +119,22 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	app.redisPool = utils.GetRedisFactory().GetPool(url)
 	defer app.redisPool.Close()
 
-	psc := redis.PubSubConn{Conn: app.redisPool.Get()}
-	psc.Subscribe(app.GetSettings().DB.Redis_Queue)
-	app.psc = &psc
 	log.Info("start register module %v", conf.Conf.DB.SQL)
-
-	manager := basemodule.NewModuleManager()
-	manager.RegisterRunMod(modules.TimerModule())
+	app.moduleManger = basemodule.NewModuleManager()
+	app.moduleManger.RegisterRunMod(modules.TimerModule())
 
 	// module
 	for i := 0; i < len(mods); i++ {
-		manager.Register(mods[i])
+		app.moduleManger.Register(mods[i])
 	}
+
+	if conf.Conf.Master.ISRealMaster {
+		app.masterServer = master.NewMaster(conf.Conf.Name, conf.Conf.Master)
+	}
+	app.masterClient = master.NewMasterClient(conf.Conf.Master, conf.Conf.Name, app, app.moduleManger)
+
 	app.OnInit(app.settings)
-	manager.Init(app, *ProcessID)
+	app.moduleManger.Init(app, *ProcessID)
 
 	if app.initDownCallback != nil {
 		app.initDownCallback(app)
@@ -141,11 +144,10 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	sig := <-c
-	manager.Destroy()
+	app.moduleManger.Destroy()
 	app.OnDestroy()
 
 	log.Info("mqant closing down (signal: %v)", sig)
-
 	return nil
 }
 
@@ -155,6 +157,7 @@ func (app *DefaultApp) Route(moduleType string, fn func(app module.App, Type str
 }
 func (app *DefaultApp) getRoute(moduleType string) func(app module.App, Type string, hash string) module.ServerSession {
 	fn := app.routes[moduleType]
+
 	if fn == nil {
 		//如果没有设置的路由,则使用默认的
 		return app.defaultRoutes
@@ -280,6 +283,9 @@ func (app *DefaultApp) GetRouteServers(filter string, hash string) (s module.Ser
 	}
 	moduleType := sl[0]
 	route := app.getRoute(moduleType)
+	if route == nil {
+		return nil, base.ErrFrozen
+	}
 	s = route(app, moduleType, hash)
 	if s == nil {
 		log.Error("Server(type : %s) Not Found", moduleType)
@@ -300,7 +306,7 @@ func (app *DefaultApp) GetSettings() conf.Config {
 	return app.settings
 }
 
-func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result interface{}, err *base.ErrorCode) {
+func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result []byte, err *base.ErrorCode) {
 	server, e := app.GetRouteServers(moduleType, module.GetServerId())
 	if e != nil {
 		err = base.NewError(404, e.Error())
@@ -309,9 +315,9 @@ func (app *DefaultApp) RpcInvokeArgs(module module.RPCModule, moduleType string,
 	return server.CallArgs(_func, sessionId, args)
 }
 
-func (app *DefaultApp) RpcAllInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result []interface{}, err []*base.ErrorCode) {
+func (app *DefaultApp) RpcAllInvokeArgs(module module.RPCModule, moduleType string, _func string, sessionId string, args []byte) (result [][]byte, err []*base.ErrorCode) {
 	servers := app.GetServersByType(moduleType)
-	result = []interface{}{}
+
 	err = []*base.ErrorCode{}
 	for _, server := range servers {
 		resultItem, errItem := server.CallArgs(_func, sessionId, args)
@@ -345,57 +351,6 @@ func (app *DefaultApp) SetInitDownCallBack(callBack module.OnInitDownCallBack) {
 	app.initDownCallback = callBack
 }
 
-//
-//func (app *DefaultApp) OnUserLogin(sessionId string) {
-//	app.VerifyUser(sessionId)
-//}
-//
-//type ProcessMessageContent struct {
-//	Method string
-//	Body   interface{}
-//}
-//
-//const LOGOUT_MESSAGE = "OnUserLogOut"
-//
-//func (app *DefaultApp) OnUserLogOut(sessionId string) {
-//	delete(app.users, sessionId)
-//	redis := app.redisPool.Get()
-//	redis.Do("DEL", base.SESSION_PERFIX+sessionId)
-//	message := ProcessMessageContent{
-//		Method: LOGOUT_MESSAGE,
-//		Body:   sessionId,
-//	}
-//	msgData, err := json.Marshal(message)
-//	if err != nil {
-//		log.Error(err.Error())
-//		return
-//	}
-//	redis.Do("PUBLISH", app.settings.DB.Redis_Queue, msgData)
-//}
-//
-//func (app *DefaultApp) handAppMessage() {
-//
-//	for {
-//		switch v := app.psc.Receive().(type) {
-//		case redis.Message:
-//			appMsg := &ProcessMessageContent{}
-//			err := json.Unmarshal(v.Data, appMsg)
-//			if err != nil {
-//				log.Error(err.Error())
-//			}
-//			switch appMsg.Method {
-//			case LOGOUT_MESSAGE:
-//				sessID := appMsg.Body.(string)
-//				delete(app.users, sessID)
-//			}
-//		case redis.PMessage:
-//		case redis.Subscription:
-//			log.Info("%s: %s %d\n", v.Channel, v.Kind, v.Count)
-//		case error:
-//			log.Error("on_request_handle", v.Error())
-//			return
-//		default:
-//
-//		}
-//	}
-//}
+func (app *DefaultApp) GetModuleManager() *basemodule.ModuleManager {
+	return app.moduleManger
+}

@@ -14,8 +14,8 @@ import (
 )
 
 // The Permissions type holds fine-grained permissions that are
-// specific to a user or a specific authentication method for a
-// user. Permissions, except for "source-address", must be enforced in
+// specific to a userModule or a specific authentication method for a
+// userModule. Permissions, except for "source-address", must be enforced in
 // the server application layer, after successful authentication. The
 // Permissions are passed on in ServerConn so a server implementation
 // can honor them.
@@ -23,14 +23,14 @@ type Permissions struct {
 	// Critical options restrict default permissions. Common
 	// restrictions are "source-address" and "force-command". If
 	// the server cannot enforce the restriction, or does not
-	// recognize it, the user should not authenticate.
+	// recognize it, the userModule should not authenticate.
 	CriticalOptions map[string]string
 
 	// Extensions are extra functionality that the server may
 	// offer on authenticated connections. Common extensions are
 	// "permit-agent-forwarding", "permit-X11-forwarding". Lack of
 	// support for an extension does not preclude authenticating a
-	// user.
+	// userModule.
 	Extensions map[string]string
 }
 
@@ -45,21 +45,21 @@ type ServerConfig struct {
 	// authenticating.
 	NoClientAuth bool
 
-	// PasswordCallback, if non-nil, is called when a user
+	// PasswordCallback, if non-nil, is called when a userModule
 	// attempts to authenticate using a password.
 	PasswordCallback func(conn ConnMetadata, password []byte) (*Permissions, error)
 
 	// PublicKeyCallback, if non-nil, is called when a client attempts public
 	// key authentication. It must return true if the given public key is
-	// valid for the given user. For example, see CertChecker.Authenticate.
+	// valid for the given userModule. For example, see CertChecker.Authenticate.
 	PublicKeyCallback func(conn ConnMetadata, key PublicKey) (*Permissions, error)
 
 	// KeyboardInteractiveCallback, if non-nil, is called when
 	// keyboard-interactive authentication is selected (RFC
 	// 4256). The client object's Challenge function should be
-	// used to query the user. The callback may offer multiple
+	// used to query the userModule. The callback may offer multiple
 	// Challenge rounds. To avoid information leaks, the client
-	// should be presented a challenge even if the user is
+	// should be presented a challenge even if the userModule is
 	// unknown.
 	KeyboardInteractiveCallback func(conn ConnMetadata, client KeyboardInteractiveChallenge) (*Permissions, error)
 
@@ -90,7 +90,7 @@ func (s *ServerConfig) AddHostKey(key Signer) {
 }
 
 // cachedPubKey contains the results of querying whether a public key is
-// acceptable for a user.
+// acceptable for a userModule.
 type cachedPubKey struct {
 	user       string
 	pubKeyData []byte
@@ -108,7 +108,7 @@ type pubKeyCache struct {
 	keys []cachedPubKey
 }
 
-// get returns the result for a given user/algo/key tuple.
+// get returns the result for a given userModule/algo/key tuple.
 func (c *pubKeyCache) get(user string, pubKeyData []byte) (cachedPubKey, bool) {
 	for _, k := range c.keys {
 		if k.user == user && bytes.Equal(k.pubKeyData, pubKeyData) {
@@ -165,7 +165,7 @@ func signAndMarshal(k Signer, rand io.Reader, data []byte) ([]byte, error) {
 	return Marshal(sig), nil
 }
 
-// handshake performs key exchange and user authentication.
+// handshake performs key exchange and userModule authentication.
 func (s *connection) serverHandshake(config *ServerConfig) (*Permissions, error) {
 	if len(config.hostKeys) == 0 {
 		return nil, errors.New("ssh: server has no host keys")

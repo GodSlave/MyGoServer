@@ -37,6 +37,7 @@ func (um *DefaultUserManager) OnUserLogOut(user *base.BaseUser) {
 		_, err1 = conn.Do("DEL", base.ID_TOKEN_PERFIX+user.UserID)
 		_, err1 = conn.Do("DEL", base.ID_REFRESH_TOKEN_PREFIX+user.UserID)
 
+
 		var session string
 		session, err1 = redis.String(conn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
 		_, err1 = conn.Do("DEL", base.SESSION_PERFIX+session)
@@ -57,7 +58,7 @@ func (um *DefaultUserManager) OnUserLogin(user *base.BaseUser) {
 }
 
 func (um *DefaultUserManager) OnUserRegister(user *base.BaseUser) {
-	log.Info("on user register :" + user.Name)
+	log.Info("on userModule register :" + user.Name)
 	if um.registerCallBack != nil {
 		um.registerCallBack(user, um.app)
 	}

@@ -34,16 +34,15 @@ type ModuleManager struct {
 
 func (mer *ModuleManager) Register(mi module.Module) {
 	md := new(DefaultModule)
-	md.mi = mi
+	md.Mi = mi
 	md.closeSig = make(chan bool, 1)
-
 	mer.mods = append(mer.mods, md)
 }
+
 func (mer *ModuleManager) RegisterRunMod(mi module.Module) {
 	md := new(DefaultModule)
-	md.mi = mi
+	md.Mi = mi
 	md.closeSig = make(chan bool, 1)
-
 	mer.runMods = append(mer.runMods, md)
 }
 
@@ -53,18 +52,14 @@ func (mer *ModuleManager) Init(app module.App, ProcessID string) {
 	mer.CheckModuleSettings() //配置文件规则检查
 	for i := 0; i < len(mer.mods); i++ {
 		for Type, modSettings := range conf.Conf.Module {
-			if mer.mods[i].mi.GetType() == Type {
+			if mer.mods[i].Mi.GetType() == Type {
 				//匹配
 				for _, setting := range modSettings {
 					//这里可能有BUG 公网IP和局域网IP处理方式可能不一样,先不管
 					if ProcessID == setting.ProcessID {
 						mer.runMods = append(mer.runMods, mer.mods[i]) //这里加入能够运行的组件
-						mer.mods[i].settings = setting
+						mer.mods[i].Settings = setting
 					}
-
-
-
-
 				}
 				break //跳出内部循环
 			}
@@ -73,7 +68,7 @@ func (mer *ModuleManager) Init(app module.App, ProcessID string) {
 
 	for i := 0; i < len(mer.runMods); i++ {
 		m := mer.runMods[i]
-		m.mi.OnInit(app, m.settings)
+		m.Mi.OnInit(app, m.Settings)
 		m.wg.Add(1)
 		go run(m)
 	}
@@ -114,26 +109,31 @@ func (mer *ModuleManager) Destroy() {
 		destroy(m)
 	}
 }
+
+func (mer *ModuleManager) GetModules() []*DefaultModule {
+	return mer.mods
+}
+
 func (mer *ModuleManager) ReportStatistics(args interface{}) {
-	if mer.app.GetSettings().Master.Enable {
-		for _, m := range mer.runMods {
-			mi := m.mi
-			switch value := mi.(type) {
-			case module.RPCModule:
-				value.GetType()
-				//TODO will add 汇报统计
-				//汇报统计
-				//servers := mer.app.GetServersByType("Master")
-				//if len(servers) == 1 {
-				//	b, _ := value.GetStatistical()
-				//	_, err := servers[0].Call("ReportForm", value.GetType(), m.settings.ProcessID, m.settings.Id, value.Version(), b, value.GetExecuting())
-				//	if err != nil {
-				//		log.Warning("Report To Master error :", err)
-				//	}
-				//}
-			default:
-			}
-		}
-		timer.SetTimer(3, mer.ReportStatistics, nil)
-	}
+	//if mer.app.GetSettings().Master.Enable {
+	//	for _, m := range mer.runMods {
+	//		Mi := m.Mi
+	//		switch value := Mi.(type) {
+	//		case module.RPCModule:
+	//			value.GetType()
+	//			//TODO will add 汇报统计
+	//			//汇报统计
+	//			//servers := mer.app.GetServersByType("Master")
+	//			//if len(servers) == 1 {
+	//			//	b, _ := value.GetStatistical()
+	//			//	_, err := servers[0].Call("ReportForm", value.GetType(), m.Settings.ProcessID, m.Settings.Id, value.Version(), b, value.GetExecuting())
+	//			//	if err != nil {
+	//			//		log.Warning("Report To Master error :", err)
+	//			//	}
+	//			//}
+	//		default:
+	//		}
+	//	}
+	//	timer.SetTimer(3, mer.ReportStatistics, nil)
+	//}
 }

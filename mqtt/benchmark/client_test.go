@@ -36,7 +36,7 @@ package benchmark
 //	nap         int    = 10
 //	host        string = "127.0.0.1"
 //	port        int    = 1883
-//	user        string = "surgemq"
+//	userModule        string = "surgemq"
 //	pass        string = "surgemq"
 //	version     int    = 4
 //
@@ -57,8 +57,8 @@ package benchmark
 //func init() {
 //	flag.StringVar(&host, "host", host, "host to server")
 //	flag.IntVar(&port, "port", port, "port to server")
-//	flag.StringVar(&user, "user", user, "pass to server")
-//	flag.StringVar(&pass, "pass", pass, "user to server")
+//	flag.StringVar(&userModule, "userModule", userModule, "pass to server")
+//	flag.StringVar(&pass, "pass", pass, "userModule to server")
 //	flag.IntVar(&messages, "messages", messages, "number of messages to send")
 //	flag.IntVar(&publishers, "publishers", publishers, "number of publishers to start (in FullMesh, only this is used)")
 //	flag.IntVar(&subscribers, "subscribers", subscribers, "number of subscribers to start (in FullMesh, this is NOT used")
@@ -125,7 +125,7 @@ package benchmark
 //	msg.SetKeepAlive(10)
 //	msg.SetWillTopic([]byte("will"))
 //	msg.SetWillMessage([]byte("send me home"))
-//	msg.SetUsername([]byte(user))
+//	msg.SetUsername([]byte(userModule))
 //	msg.SetPassword([]byte(pass))
 //
 //	return msg

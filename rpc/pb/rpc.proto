@@ -1,15 +1,15 @@
 syntax = "proto3";
 package rpcpb;
 message RPCInfo {
-    string Cid = 1;
-    string Fn = 2;
-    string ReplyTo = 3;
-    string track = 4;
-    int64 Expired = 5;
-    bool Reply = 6;
-    string SessionId = 7;
-    bytes Args = 8;
-    int32 ByteFn = 9;
+    string Cid = 1; // call id
+    string Fn = 2; // function name
+    string ReplyTo = 3; //
+    string track = 4; //
+    int64 Expired = 5; // expire time
+    bool Reply = 6; //
+    string SessionId = 7; // user session
+    bytes Args = 8; // args in bytes
+    int32 ByteFn = 9; // byte function name
 }
 
 message ResultInfo {

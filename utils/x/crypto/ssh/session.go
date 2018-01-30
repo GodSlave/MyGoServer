@@ -139,7 +139,7 @@ type Session struct {
 	stdinpipe, stdoutpipe, stderrpipe bool
 
 	// stdinPipeWriter is non-nil if StdinPipe has not been called
-	// and Stdin was specified by the user; it is the write end of
+	// and Stdin was specified by the userModule; it is the write end of
 	// a pipe connecting Session.Stdin to the stdin channel.
 	stdinPipeWriter io.WriteCloser
 

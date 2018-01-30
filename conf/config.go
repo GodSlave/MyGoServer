@@ -38,6 +38,8 @@ func LoadConfig(Path string) {
 }
 
 type Config struct {
+
+	Name        string
 	Rpc         Rpc
 	Module      map[string][]*ModuleSettings
 	Master      Master
@@ -52,7 +54,6 @@ type DB struct {
 	DBtype      string
 	SQL         string
 	Redis       string
-	Redis_Queue string
 }
 
 type Rpc struct {
@@ -112,20 +113,10 @@ type Process struct {
 }
 
 type Master struct {
-	Enable  bool
-	WebRoot string
-	WebHost string
-	SSH     []*SSH
-	Process []*Process
-}
-
-func (m *Master) GetSSH(host string) *SSH {
-	for _, ssh := range m.SSH {
-		if ssh.Host == host {
-			return ssh
-		}
-	}
-	return nil
+	ISRealMaster    bool
+	RedisUrl        string
+	SQlUrl          string
+	RedisPubSubConf *Redis
 }
 
 func readFileInto(path string) error {

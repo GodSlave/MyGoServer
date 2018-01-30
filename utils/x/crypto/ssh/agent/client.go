@@ -71,7 +71,7 @@ type AddedKey struct {
 	// agent will store the key for.
 	LifetimeSecs uint32
 	// ConfirmBeforeUse, if true, requests that the agent confirm with the
-	// user before each use of this key.
+	// userModule before each use of this key.
 	ConfirmBeforeUse bool
 }
 

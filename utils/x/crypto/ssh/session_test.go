@@ -639,7 +639,7 @@ func TestSessionID(t *testing.T) {
 	}
 	serverConf.AddHostKey(testSigners["ecdsa"])
 	clientConf := &ClientConfig{
-		User: "user",
+		User: "userModule",
 	}
 
 	go func() {

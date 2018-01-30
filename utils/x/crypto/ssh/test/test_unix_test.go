@@ -67,9 +67,9 @@ func username() string {
 	if user, err := user.Current(); err == nil {
 		username = user.Username
 	} else {
-		// user.Current() currently requires cgo. If an error is
+		// userModule.Current() currently requires cgo. If an error is
 		// returned attempt to get the username from the environment.
-		log.Printf("user.Current: %v; falling back on $USER", err)
+		log.Printf("userModule.Current: %v; falling back on $USER", err)
 		username = os.Getenv("USER")
 	}
 	if username == "" {
@@ -116,7 +116,7 @@ func clientConfig() *ssh.ClientConfig {
 	config := &ssh.ClientConfig{
 		User: username(),
 		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(testSigners["user"]),
+			ssh.PublicKeys(testSigners["userModule"]),
 		},
 		HostKeyCallback: hostKeyDB().Check,
 	}

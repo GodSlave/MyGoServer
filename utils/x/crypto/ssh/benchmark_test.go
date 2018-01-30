@@ -40,7 +40,7 @@ func sshPipe() (Conn, *server, error) {
 	}
 
 	clientConf := ClientConfig{
-		User: "user",
+		User: "userModule",
 	}
 	serverConf := ServerConfig{
 		NoClientAuth: true,

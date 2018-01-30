@@ -5,12 +5,15 @@ import (
 	"testing"
 	app2 "github.com/GodSlave/MyGoServer/app"
 	"github.com/GodSlave/MyGoServer/module/gate"
-	"github.com/GodSlave/MyGoServer/module/user"
+	"github.com/GodSlave/MyGoServer/module/userModule"
 	"github.com/GodSlave/MyGoServer/utils/uuid"
 	"fmt"
 	"github.com/GodSlave/MyGoServer/base"
 	"time"
 	"github.com/GodSlave/MyGoServer/testbase"
+	"strconv"
+	"sync"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 func TestMqtt(t *testing.T) {
@@ -22,12 +25,12 @@ func TestMqtt(t *testing.T) {
 		TopicsProvider:   "mem",         // keeps topic subscriptions in memory
 	}
 	// Listen and serve connections at localhost:1883
-	go svr.ListenAndServe("tcp://0.0.0.0:1884")
+	go svr.ListenAndServe("tcp://0.0.0.0:1883")
 }
 
 func TestRun(t *testing.T) {
 	app := app2.NewApp()
-	app.Run(gate.Module(), user.Module())
+	app.Run(gate.Module(), userModule.Module())
 }
 
 func TestUUID(t *testing.T) {
@@ -36,30 +39,38 @@ func TestUUID(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-
-	c := testbase.InitClient()
-	time.Sleep(1 * time.Second)
-	checkChan := make(chan *gate.AllResponse)
-	testbase.SubI(c, checkChan)
-	time.Sleep(1 * time.Second)
-	user := &base.BaseUser{
-		Name:     "zhanglin"+uuid.Rand().Hex(),
-		Password: "woaini1232",
+	numberOfClient := 10000
+	wg := sync.WaitGroup{}
+	wg.Add(numberOfClient)
+	for i := 0; i < numberOfClient; i++ {
+		go func(index int,wg *sync.WaitGroup) {
+			c := testbase.InitClient()
+			time.Sleep(1 * time.Second)
+			checkChan := make(chan *gate.AllResponse)
+			testbase.SubI(c, checkChan)
+			time.Sleep(1 * time.Second)
+			user := &base.BaseUser{
+				Name:     "zhanglin" + strconv.Itoa(index)+uuid.SafeString(5),
+				Password: "woaini1232" + strconv.Itoa(index),
+			}
+			RegisterI(c, user, checkChan)
+			wg.Done()
+		}(i,&wg)
 	}
-	RegisterI(c, user, checkChan)
-	//testbase.LoginI(c, user, checkChan)
+	wg.Wait()
+	//testbase.LoginI(c, userModule, checkChan)
 	//GetSelfInfoI(c, checkChan)
-
 }
 
 func RegisterI(client *service.Client, user1 *base.BaseUser, callback chan *gate.AllResponse) (err error) {
 	fmt.Println("start register")
-	login := &user.User_Register_Request{
+	login := &userModule.User_Register_Request{
 		Username:   user1.Name,
 		Password:   user1.Password,
 		VerifyCode: "aabbcc",
 	}
 	err = client.Publish(testbase.BuildIPublishMessage(client, login, "User", "Register"), nil)
+	log.Info("wait response ")
 	var allrespon *gate.AllResponse
 	allrespon = <-callback
 	fmt.Println("register Response", allrespon.State)

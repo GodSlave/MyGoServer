@@ -429,7 +429,7 @@ func visualLength(runes []rune) int {
 }
 
 // handleKey processes the given key and, optionally, returns a line of text
-// that the user has entered.
+// that the userModule has entered.
 func (t *Terminal) handleKey(key rune) (line string, ok bool) {
 	if t.pasteActive && key != keyEnter {
 		t.addKeyToLine(key)
@@ -635,7 +635,7 @@ func (t *Terminal) Write(buf []byte) (n int, err error) {
 		return writeWithCRLF(t.c, buf)
 	}
 
-	// We have a prompt and possibly user input on the screen. We
+	// We have a prompt and possibly userModule input on the screen. We
 	// have to clear it first.
 	t.move(0 /* up */, 0 /* down */, t.cursorX /* left */, 0 /* right */)
 	t.cursorX = 0

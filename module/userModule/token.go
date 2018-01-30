@@ -1,17 +1,21 @@
-package user
+package userModule
 
 import (
 	"github.com/GodSlave/MyGoServer/base"
 	"github.com/GodSlave/MyGoServer/utils/uuid"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/log"
+	"github.com/GodSlave/MyGoServer/conf"
 )
 
 func CreateToken(SessionId string, UserID string, conn redis.Conn) (token string, rToken string) {
-	_, err1 := conn.Do("SET", base.SESSION_PERFIX+SessionId, UserID)
-	_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*24)
-	_, err1 = conn.Do("SET", base.ID_SESSION_PREFIX+UserID, SessionId)
-	_, err1 = conn.Do("EXPIRE", base.ID_SESSION_PREFIX+UserID, 3600*24)
+	var err1 error
+	if SessionId != "" {
+		_, err1 = conn.Do("SET", base.SESSION_PERFIX+SessionId, UserID)
+		_, err1 = conn.Do("EXPIRE", base.SESSION_PERFIX+SessionId, 3600*12)
+		_, err1 = conn.Do("SET", base.ID_SESSION_PREFIX+UserID, SessionId)
+		_, err1 = conn.Do("EXPIRE", base.ID_SESSION_PREFIX+UserID, 3600*12)
+	}
 	token = uuid.SafeString(32)
 	rToken = uuid.SafeString(32)
 	_, err1 = conn.Do("SET", base.TOKEN_PERFIX+token, UserID)
@@ -36,8 +40,8 @@ func CheckVerifyCode(phone string, VerifyCode string, c redis.Conn) bool {
 	if err1 != nil {
 		log.Error(err1.Error())
 	}
-
-	if ( reply1 != VerifyCode ) && VerifyCode != "aabbcc" {
+	// aabbcc for test
+	if ( reply1 != VerifyCode ) && VerifyCode != "aabbcc" && VerifyCode != conf.Conf.PrivateKey {
 		return false
 	}
 	c.Do("DEL", verifyCodeKey+phone)

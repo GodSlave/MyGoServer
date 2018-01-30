@@ -35,7 +35,7 @@ func NewUserId(name, comment, email string) *UserId {
 	// RFC 4880 doesn't deal with the structure of userid strings; the
 	// name, comment and email form is just a convention. However, there's
 	// no convention about escaping the metacharacters and GPG just refuses
-	// to create user ids where, say, the name contains a '('. We mirror
+	// to create userModule ids where, say, the name contains a '('. We mirror
 	// this behaviour.
 
 	if hasInvalidCharacters(name) || hasInvalidCharacters(comment) || hasInvalidCharacters(email) {
@@ -86,7 +86,7 @@ func (uid *UserId) Serialize(w io.Writer) error {
 	return err
 }
 
-// parseUserId extracts the name, comment and email from a user id string that
+// parseUserId extracts the name, comment and email from a userModule id string that
 // is formatted as "Full Name (Comment) <email@example.com>".
 func parseUserId(id string) (name, comment, email string) {
 	var n, c, e struct {

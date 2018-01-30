@@ -860,7 +860,7 @@ type goracleDriver struct {
 func (cfg *goracleDriver) Parse(driverName, dataSourceName string) (*core.Uri, error) {
 	db := &core.Uri{DbType: core.ORACLE}
 	dsnPattern := regexp.MustCompile(
-		`^(?:(?P<user>.*?)(?::(?P<passwd>.*))?@)?` + // [user[:password]@]
+		`^(?:(?P<userModule>.*?)(?::(?P<passwd>.*))?@)?` + // [userModule[:password]@]
 			`(?:(?P<net>[^\(]*)(?:\((?P<addr>[^\)]*)\))?)?` + // [net[(addr)]]
 			`\/(?P<dbname>.*?)` + // /dbname
 			`(?:\?(?P<params>[^\?]*))?$`) // [?param1=value1&paramN=valueN]
@@ -883,12 +883,12 @@ func (cfg *goracleDriver) Parse(driverName, dataSourceName string) (*core.Uri, e
 type oci8Driver struct {
 }
 
-//dataSourceName=user/password@ipv4:port/dbname
-//dataSourceName=user/password@[ipv6]:port/dbname
+//dataSourceName=userModule/password@ipv4:port/dbname
+//dataSourceName=userModule/password@[ipv6]:port/dbname
 func (p *oci8Driver) Parse(driverName, dataSourceName string) (*core.Uri, error) {
 	db := &core.Uri{DbType: core.ORACLE}
 	dsnPattern := regexp.MustCompile(
-		`^(?P<user>.*)\/(?P<password>.*)@` + // user:password@
+		`^(?P<userModule>.*)\/(?P<password>.*)@` + // userModule:password@
 			`(?P<net>.*)` + // ip:port
 			`\/(?P<dbname>.*)`) // dbname
 	matches := dsnPattern.FindStringSubmatch(dataSourceName)

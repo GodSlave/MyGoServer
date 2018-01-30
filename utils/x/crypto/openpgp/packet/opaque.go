@@ -82,7 +82,7 @@ func (or *OpaqueReader) Next() (op *OpaquePacket, err error) {
 }
 
 // OpaqueSubpacket represents an unparsed OpenPGP subpacket,
-// as found in signature and user attribute packets.
+// as found in signature and userModule attribute packets.
 type OpaqueSubpacket struct {
 	SubType  uint8
 	Contents []byte

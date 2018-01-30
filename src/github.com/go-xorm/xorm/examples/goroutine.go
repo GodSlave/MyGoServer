@@ -10,7 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// User describes a user
+// User describes a userModule
 type User struct {
 	Id   int64
 	Name string
@@ -46,7 +46,7 @@ func test(engine *xorm.Engine) {
 			} else {
 				/*err = engine.(u)
 				if err != nil {
-					fmt.Println("Map user failed")
+					fmt.Println("Map userModule failed")
 				} else {*/
 				for j := 0; j < 10; j++ {
 					if x+j < 2 {

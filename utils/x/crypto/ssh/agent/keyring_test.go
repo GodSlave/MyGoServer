@@ -51,7 +51,7 @@ func validateListedKeys(t *testing.T, a Agent, expectedKeys []string) {
 }
 
 func TestKeyringAddingAndRemoving(t *testing.T) {
-	keyNames := []string{"dsa", "ecdsa", "rsa", "user"}
+	keyNames := []string{"dsa", "ecdsa", "rsa", "userModule"}
 
 	// add all test private keys
 	k := NewKeyring()

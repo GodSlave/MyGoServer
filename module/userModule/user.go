@@ -1,4 +1,4 @@
-package user
+package userModule
 
 import (
 	"github.com/GodSlave/MyGoServer/module/base"
@@ -23,6 +23,7 @@ type ModuleUser struct {
 }
 
 var verifyCodeKey = "VerifyCode"
+var verifyCodeTimeKey = "VerifyCodeTime"
 
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
@@ -161,22 +162,32 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 	}
 	m.app.GetUserManager().OnUserRegister(user)
 	return &User_Register_Response{
-		Result: "success",
+		Result: user.UserID,
 	}, base.ErrNil
 }
 
-func (m *ModuleUser) GetVerifyCode(SessionId string, form User_GetVerifyCode_Request) (result *User_GetVerifyCode_Response, err *base.ErrorCode) {
+func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Request) (result *User_GetVerifyCode_Response, err *base.ErrorCode) {
 	randString := uuid.RandNumbers(6)
 	conn := m.redisPool.Get()
 	var err1 error
+	if len(form.PhoneNumber) < 11 {
+		return nil, base.ErrParamNotAllow
+	}
+	lastRequestTime, err1 := redis.Int64(conn.Do("GET", verifyCodeTimeKey+form.PhoneNumber))
+	if time.Now().Unix()-lastRequestTime < 60 {
+		return nil, base.ErrVerifySendTooBusy
+	}
+
+	_, err1 = conn.Do("DEL", verifyCodeKey+form.PhoneNumber)
 	_, err1 = conn.Do("SET", verifyCodeKey+form.PhoneNumber, randString)
 	_, err1 = conn.Do("EXPIRE", verifyCodeKey+form.PhoneNumber, 900)
+	_, err1 = conn.Do("SET", verifyCodeTimeKey+form.PhoneNumber, time.Now().Unix())
+	//TODO  real send verify code
 
 	if err1 != nil {
 		log.Error("operate redis error")
 		return nil, base.ErrInternal
 	}
-
 	return nil, base.ErrNil
 }
 
