@@ -132,6 +132,7 @@ func (m DefaultMasterClient) publicMessage(funcName string, from string, obj int
 			log.Error(err.Error())
 		}
 	}
+	log.Info(string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
 	m.rpcClient.Call(*callInfo, m.callback_chan)
 }
@@ -210,7 +211,6 @@ func (m DefaultMasterClient) updateModuleInfos(appInfo *ApplicationInfo) {
 					//如果远程的rpc存在则创建一个对应的客户端
 					rpcClient.NewRedisClient(module.Redis)
 				}
-
 
 				serverSession := basemodule.NewServerSession(module.Id, moduleName, module.ByteID, rpcClient)
 				moduleInfo := &OtherModuleInfo{

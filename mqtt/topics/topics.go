@@ -74,11 +74,10 @@ func Register(name string, provider TopicsProvider) {
 	if provider == nil {
 		panic("topics: Register provide is nil")
 	}
-
+	lock.Lock()
 	if _, dup := providers[name]; dup {
 		panic("topics: Register called twice for provider " + name)
 	}
-	lock.Lock()
 	providers[name] = provider
 	lock.Unlock()
 }

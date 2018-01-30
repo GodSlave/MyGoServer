@@ -73,6 +73,7 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 		md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
 		if user.Password == hex.EncodeToString(md5sum[:]) {
 			conn := m.redisPool.Get()
+			defer conn.Close()
 			m.removeLoginUser(user, conn, SessionId)
 			token, rToken := CreateToken(SessionId, user.UserID, conn)
 			if token == "" {
@@ -142,6 +143,7 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 	}
 
 	c := m.redisPool.Get()
+	defer c.Close()
 	checkresult := CheckVerifyCode(form.Username, form.VerifyCode, c)
 	if !checkresult {
 		return nil, base.ErrVerifyCodeErr
@@ -169,6 +171,7 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Request) (result *User_GetVerifyCode_Response, err *base.ErrorCode) {
 	randString := uuid.RandNumbers(6)
 	conn := m.redisPool.Get()
+	defer conn.Close()
 	var err1 error
 	if len(form.PhoneNumber) < 11 {
 		return nil, base.ErrParamNotAllow
@@ -221,6 +224,7 @@ func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Requ
 		userid, err1 := redis.String(conn.Do("GET", base.REFRESH_TOKEN_PERFIX+form.RefreshToken))
 		if err1 == nil {
 			conn := m.redisPool.Get()
+			defer conn.Close()
 			token, rToken := CreateToken(sessionId, userid, conn)
 			refreshResponse := &User_RefreshToken_Response{
 				TokenData: &UserTokenData{
