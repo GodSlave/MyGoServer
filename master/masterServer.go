@@ -177,7 +177,7 @@ func (m *DefaultMasterServer) checkReceiverMessage() {
 				if _, b := m.infos[appStatus.AppName]; !b {
 					m.requestClientInfo(appStatus.AppName)
 				}
-
+				m.appLostCheck[appStatus.AppName] = 0
 				m.status[appStatus.AppName] = *appStatus
 			}
 			//case resultInfo := <-m.callback_chan:
