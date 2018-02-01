@@ -114,12 +114,10 @@ func (s *RPCServer) Register(id string, byteId int32, f interface{}) {
 	if _, ok := s.functions[id]; ok {
 		panic(fmt.Sprintf("function id %v: already registered", id))
 	}
-
 	fuction1 := *&mqrpc.FunctionInfo{
 		Function:  f,
 		Goroutine: false,
 	}
-
 	s.functions[id] = fuction1
 	s.byteFunctions[byteId] = fuction1
 }

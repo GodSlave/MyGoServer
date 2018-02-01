@@ -36,10 +36,7 @@ func CreateToken(SessionId string, UserID string, conn redis.Conn) (token string
 }
 
 func CheckVerifyCode(phone string, VerifyCode string, c redis.Conn) bool {
-	reply1, err1 := redis.String(c.Do("GET", verifyCodeKey+phone))
-	if err1 != nil {
-		log.Error(err1.Error())
-	}
+	reply1, _ := redis.String(c.Do("GET", verifyCodeKey+phone))
 	// aabbcc for test
 	if ( reply1 != VerifyCode ) && VerifyCode != "aabbcc" && VerifyCode != conf.Conf.PrivateKey {
 		return false

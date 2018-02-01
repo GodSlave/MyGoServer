@@ -24,6 +24,7 @@ import (
 	"github.com/surgemq/message"
 	"github.com/GodSlave/MyGoServer/mqtt/sessions"
 	"github.com/GodSlave/MyGoServer/mqtt/topics"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 const (
@@ -142,7 +143,11 @@ func (this *Client) Connect(uri string, msg *message.ConnectMessage) (err error)
 // onComplete is called when PUBACK is received. For QOS 2 messages, onComplete is
 // called after the PUBCOMP message is received.
 func (this *Client) Publish(msg *message.PublishMessage, onComplete OnCompleteFunc) error {
-	return this.svc.Publish(msg, onComplete)
+	if this.svc != nil {
+		return this.svc.Publish(msg, onComplete)
+	}
+	return &base.ErrorCode{0xff, "service is nil"}
+
 }
 
 // Subscribe sends a single SUBSCRIBE message to the server. The SUBSCRIBE message
@@ -155,7 +160,10 @@ func (this *Client) Publish(msg *message.PublishMessage, onComplete OnCompleteFu
 // So in effect, the client can supply different onPublish functions for different
 // topics.
 func (this *Client) Subscribe(msg *message.SubscribeMessage, onComplete OnCompleteFunc, onPublish OnPublishFunc) error {
-	return this.svc.subscribe(msg, onComplete, onPublish)
+	if this != nil && this.svc != nil {
+		return this.svc.subscribe(msg, onComplete, onPublish)
+	}
+	return &base.ErrorCode{0xff, "service is nil"}
 }
 
 // Unsubscribe sends a single UNSUBSCRIBE message to the server. The UNSUBSCRIBE

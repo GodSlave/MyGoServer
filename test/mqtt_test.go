@@ -39,23 +39,26 @@ func TestUUID(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	numberOfClient := 500
+	numberOfClient := 2500
 	wg := sync.WaitGroup{}
 	wg.Add(numberOfClient)
 	for i := 0; i < numberOfClient; i++ {
-		go func(index int,wg *sync.WaitGroup) {
+		go func(index int, wg *sync.WaitGroup) {
 			c := testbase.InitClient()
 			time.Sleep(1 * time.Second)
 			checkChan := make(chan *gate.AllResponse)
 			testbase.SubI(c, checkChan)
 			time.Sleep(1 * time.Second)
 			user := &base.BaseUser{
-				Name:     "zhanglin" + strconv.Itoa(index)+uuid.SafeString(5),
+				Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
 				Password: "woaini1232" + strconv.Itoa(index),
 			}
-			RegisterI(c, user, checkChan)
+			err := RegisterI(c, user, checkChan)
+			if err != nil {
+				log.Error(err.Error())
+			}
 			wg.Done()
-		}(i,&wg)
+		}(i, &wg)
 	}
 	wg.Wait()
 	//testbase.LoginI(c, userModule, checkChan)

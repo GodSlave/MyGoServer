@@ -197,9 +197,9 @@ func (l *Logger) Log(level Level, format string, a ...interface{}) {
 		Message:  message,
 		Time:     time.Now(),
 	}
-	//if l.CallStackDepth > 0 {
-	//	entry.CallStack, entry.ShortFile = GetCallStack(4, l.CallStackDepth, l.CallStackFilter)
-	//}
+	if l.CallStackDepth > 0 {
+		entry.CallStack, entry.ShortFile = GetCallStack(4, l.CallStackDepth, l.CallStackFilter)
+	}
 	entry.FormattedMessage = l.Formatter(l, entry)
 	l.entries <- entry
 }

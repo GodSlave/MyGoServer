@@ -12,6 +12,7 @@ import (
 	"sync"
 	"github.com/GodSlave/MyGoServer/module/base"
 	"github.com/GodSlave/MyGoServer/module"
+	"math/rand"
 )
 
 type DefaultMasterClient struct {
@@ -73,16 +74,48 @@ func (m DefaultMasterClient) SetUpdateApplicationListCallBack(callback UpdateApp
 func (m DefaultMasterClient) GetModule(module string) *module.ServerSession {
 	modules := m.moduleInfo[module]
 	if modules != nil && len(modules) > 0 {
-		return modules[0].serverSession
-	}
+		if len(modules) > 1 {
+			randContent := rand.Float32()
 
+			for _, moduleInfo := range modules {
+				if randContent <= moduleInfo.load {
+					return moduleInfo.serverSession
+				} else {
+					randContent -= moduleInfo.load
+				}
+			}
+			log.Error(" process error  %f", randContent)
+			for _, moduleInfo := range modules {
+				log.Error(strconv.FormatFloat(float64(moduleInfo.load), 'E', -1, 64))
+			}
+		} else {
+			return modules[0].serverSession
+		}
+
+	}
 	return nil
 }
 
 func (m DefaultMasterClient) GetModuleByByte(appByteName byte) *module.ServerSession {
 	modules := m.moduleInfoByte[appByteName]
 	if modules != nil && len(modules) > 0 {
-		return modules[0].serverSession
+		if len(modules) > 1 {
+			randContent := rand.Float32()
+
+			for _, moduleInfo := range modules {
+				if randContent <= moduleInfo.load {
+					return moduleInfo.serverSession
+				} else {
+					randContent -= moduleInfo.load
+				}
+			}
+			log.Info(" process error  %f", randContent)
+			for _, moduleInfo := range modules {
+				log.Info(strconv.FormatFloat(float64(moduleInfo.load), 'E', -1, 64))
+			}
+		} else {
+			return modules[0].serverSession
+		}
 	}
 	return nil
 }
@@ -90,7 +123,6 @@ func (m DefaultMasterClient) GetModuleByByte(appByteName byte) *module.ServerSes
 func (m DefaultMasterClient) Shutdown() {
 	//TODO
 	m.publicMessage(Bye, m.Name, Bye)
-
 }
 
 func (m DefaultMasterClient) ToShutdown() {
@@ -105,7 +137,7 @@ func (m DefaultMasterClient) RegisterToServer() {
 		Modules: conf.Conf.Module,
 	}
 	m.publicMessage(Register, m.Name, appInfo)
-	m.publicMessage(getAppList, m.Name, m.Name)
+	m.publicMessage(GetAppList, m.Name, m.Name)
 }
 
 func (m DefaultMasterClient) buildDefaultCallInfo(functionName string, from string, args []byte) *mqrpc.CallInfo {
@@ -168,16 +200,29 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 					if err != nil {
 						panic(err)
 					}
+					appStatusMap := make(map[string]int32, len(apps))
+					for _, appStatus := range apps {
+						appStatusMap[appStatus.AppName] = appStatus.Load
+					}
 
+					for _, moduleInfos := range m.moduleInfo {
+						var allLoad int32
+						for _, moduleInfo := range moduleInfos {
+							allLoad += appStatusMap[moduleInfo.appName]
+						}
+
+						for _, moduleInfo := range moduleInfos {
+							moduleInfo.load = float32(appStatusMap[moduleInfo.appName]) / float32(allLoad)
+						}
+					}
 				}
 			}
-
 
 		case selfCallInfo := <-selfCallChan:
 			funcName := selfCallInfo.RpcInfo.Fn
 			log.Info(funcName)
 			switch funcName {
-			case getAppList:
+			case GetAppList:
 				infos := []*ApplicationInfo{}
 				error := json.Unmarshal(selfCallInfo.RpcInfo.Args, &infos)
 				if error != nil {
@@ -187,8 +232,18 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 					m.updateModuleInfos(appInfo)
 				}
 			case GetAppStatus:
-
+				m.reportStatus()
+			case UpdateInfo:
+				appName := ""
+				error := json.Unmarshal(selfCallInfo.RpcInfo.Args, &appName)
+				if error != nil {
+					log.Error(error.Error())
+				}
+				if appName == m.Name {
+					m.RegisterToServer()
+				}
 			}
+
 		}
 	}
 }
@@ -215,8 +270,8 @@ func (m DefaultMasterClient) updateModuleInfos(appInfo *ApplicationInfo) {
 				serverSession := basemodule.NewServerSession(module.Id, moduleName, module.ByteID, rpcClient)
 				moduleInfo := &OtherModuleInfo{
 					serverSession: &serverSession,
-					appName:       m.Name,
-					key:           m.Name + module.Id,
+					appName:       appInfo.Name,
+					key:           appInfo.Name + module.Id,
 				}
 				m.checkToRemoveFromCacheModule(moduleInfo)
 				m.lock.Lock()
@@ -270,37 +325,43 @@ func (m DefaultMasterClient) removeApplication(name string) {
 func (m DefaultMasterClient) tick() {
 	for {
 		time.Sleep(1 * time.Second)
-		moduleInfo := make([]ModuleStatus, len(m.moduleManager.GetModules()))
-		var allLoad int32
-		var allProcessingNumbers int32
-		for index, subModule := range m.moduleManager.GetModules() {
-			m := subModule.Mi
-			if m == nil {
-				log.Error("Module is nil")
-				return
-			}
-			rpcModule, b := subModule.Mi.(module.RPCModule)
-			if b {
-				statistical, _ := rpcModule.GetStatistical()
-				var load int32
-				load = int32(rpcModule.GetExecuting())
-				moduleInfo[index] = ModuleStatus{
-					ModuleName:  subModule.Mi.GetType(),
-					Load:        load,
-					MethodLoads: statistical,
-				}
-				allLoad += load
-				allProcessingNumbers += load
-			}
-		}
-
-		appStatus := &AppStatus{
-			AppName:           m.Name,
-			Load:              allLoad,
-			ProcessIngNumbers: allProcessingNumbers,
-			ModuleStatus:      moduleInfo,
-		}
-		m.publicMessage(ReportStatus, m.Name, appStatus)
+		m.reportStatus()
 	}
 
+}
+
+func (m DefaultMasterClient) reportStatus() {
+	moduleInfo := make([]ModuleStatus, len(m.moduleManager.GetModules()))
+	var allLoad int32
+	var allProcessingNumbers int32
+	for index, subModule := range m.moduleManager.GetModules() {
+		m := subModule.Mi
+		if m == nil {
+			log.Error("Module is nil")
+			return
+		}
+		rpcModule, b := subModule.Mi.(module.RPCModule)
+		if b {
+			statistical, _ := rpcModule.GetStatistical()
+			var load int32
+			load = int32(rpcModule.GetExecuting())
+
+			allLoad += load
+			moduleInfo[index] = ModuleStatus{
+				ModuleName:  subModule.Mi.GetType(),
+				Load:        load,
+				MethodLoads: statistical,
+			}
+
+			allProcessingNumbers += load
+		}
+	}
+
+	appStatus := &AppStatus{
+		AppName:           m.Name,
+		Load:              allLoad + 1,
+		ProcessIngNumbers: allProcessingNumbers,
+		ModuleStatus:      moduleInfo,
+	}
+	m.publicMessage(ReportStatus, m.Name, appStatus)
 }

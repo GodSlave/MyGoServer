@@ -6,17 +6,18 @@ import (
 )
 
 var (
-	Register        = "Register"
-	OnRegister      = "OnRegister"
-	UnRegister      = "UnRegister"
-	OnUnRegister    = "OnUnRegister"
-	GetAppStatus    = "GetAppStatus"
-	ReportStatus    = "ReportStatus"
-	SyncVersionCode = "SyncVersionCode"
-	getAppList      = "getAppList"
-	MasterStr       = "Master"
-	UpdateStatus    = "UpdateStatus"
+	Register        = "Register"        //子服务器注册到主服务器
+	OnRegister      = "OnRegister"      //主服务器通知各个子服务器
+	UnRegister      = "UnRegister"      //子服务器通知到主服务器
+	OnUnRegister    = "OnUnRegister"    //主服务器通知各个子服务器
+	GetAppStatus    = "GetAppStatus"    //获得各个子服务器状态
+	ReportStatus    = "ReportStatus"    //子服务器报告自身状态
+	SyncVersionCode = "SyncVersionCode" //同步版本号
+	GetAppList      = "GetAppList"      //获得子服务器列表
+	MasterStr       = "Master"          //主服务器标志
+	UpdateStatus    = "UpdateStatus"    //主服务器同步子服务器状态
 	Bye             = "Bye"
+	UpdateInfo      = "UpdateInfo" //主服务器要求子服务器重新注册·
 )
 
 type Master interface {
@@ -60,7 +61,7 @@ type ModuleStatus struct {
 
 type OtherModuleInfo struct {
 	serverSession *module.ServerSession
-	load          int
+	load          float32
 	appName       string
 	key           string
 }

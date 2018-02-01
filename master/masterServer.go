@@ -31,6 +31,7 @@ type DefaultMasterServer struct {
 	versionCode   int32
 	masterConfig  conf.Master
 	Modules       map[string][]OtherModuleInfo
+	appLostCheck  map[string]int
 }
 
 func NewMaster(serverId string, masterConf conf.Master) Master {
@@ -38,6 +39,7 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 	master.masterConfig = masterConf
 	master.infos = map[string]ApplicationInfo{}
 	master.status = map[string]AppStatus{}
+	master.appLostCheck = map[string]int{}
 	master.appRpcClient = map[string]*defaultrpc.RedisClient{}
 	redisUrl := masterConf.RedisUrl
 	master.redisPool = utils.GetRedisFactory().GetPool(redisUrl)
@@ -64,6 +66,7 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 
 func (m *DefaultMasterServer) Register(info ApplicationInfo) {
 	m.infos[info.Name] = info
+	m.appLostCheck[info.Name] = 0
 	redisConf := &conf.Redis{
 		Uri:   m.masterConfig.RedisPubSubConf.Uri,
 		Queue: info.Name,
@@ -77,6 +80,8 @@ func (m *DefaultMasterServer) Register(info ApplicationInfo) {
 
 func (m *DefaultMasterServer) UnRegister(appName string) {
 	delete(m.infos, appName)
+	delete(m.appLostCheck, appName)
+	delete(m.appRpcClient, appName)
 	m.versionCode += 1
 	m.publicMessage(OnUnRegister, appName, appName, m.rpcClient)
 }
@@ -103,7 +108,7 @@ func (m *DefaultMasterServer) GetAppList(name string) []ApplicationInfo {
 			tempApp[index] = value
 			index ++
 		}
-		m.publicMessage(getAppList, MasterStr, tempApp, val)
+		m.publicMessage(GetAppList, MasterStr, tempApp, val)
 	}
 	return nil
 }
@@ -158,7 +163,7 @@ func (m *DefaultMasterServer) checkReceiverMessage() {
 			case GetAppStatus:
 				appName := string(callInfo.RpcInfo.Args)
 				m.GetAppStatus(appName)
-			case getAppList:
+			case GetAppList:
 				appName := string(callInfo.RpcInfo.Args)
 				m.GetAppList(appName)
 			case ReportStatus:
@@ -168,6 +173,11 @@ func (m *DefaultMasterServer) checkReceiverMessage() {
 					log.Error(err.Error())
 					return
 				}
+
+				if _, b := m.infos[appStatus.AppName]; !b {
+					m.requestClientInfo(appStatus.AppName)
+				}
+
 				m.status[appStatus.AppName] = *appStatus
 			}
 			//case resultInfo := <-m.callback_chan:
@@ -178,14 +188,30 @@ func (m *DefaultMasterServer) checkReceiverMessage() {
 func (m *DefaultMasterServer) tickServerStatus() {
 	for {
 		time.Sleep(1 * time.Second)
+
+		for key, value := range m.appLostCheck {
+			m.appLostCheck[key] = value + 1
+			if value == 10 {
+				m.UnRegister(key)
+			}
+		}
+
 		tempStatus := make([]AppStatus, len(m.status))
 		index := 0
 		for _, value := range m.status {
 			value.ModuleStatus = nil
+			if m.appLostCheck[value.AppName] >= 3 {
+				value.Load = 9999
+			}
 			tempStatus[index] = value
 			index ++
 		}
 		m.publicMessage(UpdateStatus, MasterStr, tempStatus, m.rpcClient)
+
 		//m.publicMessage(SyncVersionCode, MasterStr, m.versionCode, m.rpcClient) //keep client  & master  in same status
 	}
+}
+
+func (m *DefaultMasterServer) requestClientInfo(appName string) {
+	m.publicMessage(UpdateInfo, MasterStr, appName, m.rpcClient)
 }

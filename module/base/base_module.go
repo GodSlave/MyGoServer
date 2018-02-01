@@ -199,9 +199,9 @@ func (m *BaseModule) OnComplete(fn string, callInfo *mqrpc.CallInfo, result *rpc
 	}
 }
 func (m *BaseModule) GetExecuting() int64 {
-	//if m.GetServer().GetRPCServer() != nil {
-	//	return m.GetServer().GetRPCServer().GetExecuting()
-	//}
+	if m.GetServer().GetRPCServer() != nil {
+		return m.GetServer().GetRPCServer().GetExecuting()
+	}
 	return 0
 }
 func (m *BaseModule) GetStatistical() (statistical string, err error) {
