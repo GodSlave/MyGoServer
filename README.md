@@ -102,9 +102,9 @@ byte2 对应 Func编号
 
 ## 负载均衡  
 参考work目录下的work1-work4   
-work1 为主进程，实现子进程管理   对应main1.go
-work2 为网关模块，负责用户接入   对应main2.go
-work3，work4分别为用户模块，     对应main3.go
+work1 为主进程，实现子进程管理   对应main1.go  
+work2 为网关模块，负责用户接入   对应main2.go  
+work3，work4分别为用户模块，     对应main3.go  
 
 运行test目录中的mqtt.test 的TestJson 方法 可以看到work3和work4 同时在处理用户的注册请求  
 
