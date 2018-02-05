@@ -2,10 +2,8 @@ package master
 
 import (
 	"github.com/garyburd/redigo/redis"
-	"github.com/go-xorm/xorm"
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/utils"
-	"github.com/GodSlave/MyGoServer/db"
 	"github.com/GodSlave/MyGoServer/log"
 	"github.com/GodSlave/MyGoServer/rpc/base"
 	"github.com/GodSlave/MyGoServer/rpc"
@@ -13,11 +11,12 @@ import (
 	"strconv"
 	"time"
 	"encoding/json"
+	"github.com/influxdata/influxdb/client/v2"
+	"strings"
 )
 
 type DefaultMasterServer struct {
 	Master
-	Engine        *xorm.Engine
 	redisPool     *redis.Pool
 	rpcClient     *defaultrpc.RedisClient
 	rpcServer     *defaultrpc.RedisServer
@@ -32,6 +31,7 @@ type DefaultMasterServer struct {
 	masterConfig  conf.Master
 	Modules       map[string][]OtherModuleInfo
 	appLostCheck  map[string]int
+	client        client.Client
 }
 
 func NewMaster(serverId string, masterConf conf.Master) Master {
@@ -44,14 +44,21 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 	redisUrl := masterConf.RedisUrl
 	master.redisPool = utils.GetRedisFactory().GetPool(redisUrl)
 	master.serverId = serverId
-	sql := db.BaseSql{
+	fluxclient, err := client.NewHTTPClient(
+		client.HTTPConfig{
+			Addr:     masterConf.DBConfig.Addr,
+			Username: masterConf.DBConfig.UserName,
+			Password: masterConf.DBConfig.Password,
+		},
+	)
+	if err != nil {
+		panic(err)
 	}
-	SQlUrl := masterConf.SQlUrl
-	sql.Url = SQlUrl
-	log.Info(sql.Url)
-	sql.InitDB()
-	sql.CheckMigrate()
-	master.Engine = sql.Engine
+	master.client = fluxclient
+
+	if err != nil {
+		panic(err)
+	}
 
 	master.rpcClient, _ = defaultrpc.NewRedisClient(masterConf.RedisPubSubConf)
 	master.call_chan = make(chan mqrpc.CallInfo, 10)
@@ -186,29 +193,63 @@ func (m *DefaultMasterServer) checkReceiverMessage() {
 	}
 }
 func (m *DefaultMasterServer) tickServerStatus() {
+
 	for {
 		time.Sleep(1 * time.Second)
-
+		onLineUser := 0
 		for key, value := range m.appLostCheck {
 			m.appLostCheck[key] = value + 1
 			if value == 10 {
 				m.UnRegister(key)
 			}
 		}
-
+		fields := map[string]interface{}{}
 		tempStatus := make([]AppStatus, len(m.status))
 		index := 0
+
 		for _, value := range m.status {
-			value.ModuleStatus = nil
 			if m.appLostCheck[value.AppName] >= 3 {
-				value.Load = 9999
+				value.Load = 99999
 			}
+			for _, moduleInfo := range value.ModuleStatus {
+				if strings.HasPrefix(moduleInfo.ModuleName, "Gate") {
+					onLineUser += int(moduleInfo.Load)
+				}
+			}
+			value.ModuleStatus = nil
 			tempStatus[index] = value
 			index ++
+			fields[value.AppName] = value
 		}
 		m.publicMessage(UpdateStatus, MasterStr, tempStatus, m.rpcClient)
 
-		//m.publicMessage(SyncVersionCode, MasterStr, m.versionCode, m.rpcClient) //keep client  & master  in same status
+		//report for statistic
+		go func(onLineUser int) {
+			bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+				Database:  conf.Conf.Master.DBConfig.DBName,
+				Precision: "s",
+			})
+			if err != nil {
+				log.Error(err.Error())
+			}
+			pt, err := client.NewPoint("appInfo", nil, fields, time.Now())
+			if err == nil {
+				bp.AddPoint(pt)
+			} else {
+				log.Error(err.Error())
+			}
+			onLineUserInfo := map[string]interface{}{"OnLineUser": onLineUser}
+			pt2, err := client.NewPoint("OnLineUser", nil, onLineUserInfo, time.Now())
+			if err == nil {
+				bp.AddPoint(pt2)
+			} else {
+				log.Error(err.Error())
+			}
+			err = m.client.Write(bp)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}(onLineUser)
 	}
 }
 

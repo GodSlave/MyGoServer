@@ -38,7 +38,6 @@ func LoadConfig(Path string) {
 }
 
 type Config struct {
-
 	Name        string
 	Rpc         Rpc
 	Module      map[string][]*ModuleSettings
@@ -51,9 +50,9 @@ type Config struct {
 }
 
 type DB struct {
-	DBtype      string
-	SQL         string
-	Redis       string
+	DBtype string
+	SQL    string
+	Redis  string
 }
 
 type Rpc struct {
@@ -115,8 +114,16 @@ type Process struct {
 type Master struct {
 	ISRealMaster    bool
 	RedisUrl        string
-	SQlUrl          string
+	DBConfig        *InfluxDBConfig
 	RedisPubSubConf *Redis
+}
+
+type InfluxDBConfig struct {
+	DBName    string
+	UserName  string
+	Password  string
+	Addr      string
+	Precision string
 }
 
 func readFileInto(path string) error {

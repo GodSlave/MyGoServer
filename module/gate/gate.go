@@ -89,7 +89,7 @@ func (m *Gate) OnNewMessage(msg *message.PublishMessage, sess *sessions.Session)
 
 	defer func() {
 		if r := recover(); r != nil {
-  			log.Error("Gate  OnRecover error [%s]", r)
+			log.Error("Gate  OnRecover error [%s]", r)
 		}
 	}()
 	topic := msg.Topic()
@@ -357,4 +357,11 @@ func (m *Gate) KickOut(userId string) {
 			service.KickOut()
 		}
 	}
+}
+
+func (m *Gate) GetExecuting() int64 {
+	if m.svr != nil {
+		return m.svr.GetConnectUser()
+	}
+	return 0
 }

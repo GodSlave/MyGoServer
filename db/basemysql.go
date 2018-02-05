@@ -39,7 +39,6 @@ func (sql *BaseSql) CheckMigrate() {
 	} else {
 		sql.migrate(0)
 	}
-
 }
 
 func (sql *BaseSql) migrate(oldversion int32) {
@@ -48,11 +47,9 @@ func (sql *BaseSql) migrate(oldversion int32) {
 		sql.Engine.Insert(&DBVersion{Version: 1})
 		checkError(err)
 	}
-
 	if oldversion == 1 {
 		sql.Engine.SQL("update d_b_version set version = 2 ;")
 	}
-
 }
 
 func checkError(err error) {

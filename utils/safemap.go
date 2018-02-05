@@ -99,3 +99,7 @@ func (m *BeeMap) Items() map[interface{}]interface{} {
 	m.lock.RUnlock()
 	return r
 }
+
+func (m *BeeMap) Size() int{
+	return  len(m.bm)
+}

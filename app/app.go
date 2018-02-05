@@ -10,7 +10,6 @@ import (
 	"flag"
 	"github.com/GodSlave/MyGoServer/log"
 	"github.com/GodSlave/MyGoServer/module/base"
-	"github.com/GodSlave/MyGoServer/module/modules"
 	"github.com/GodSlave/MyGoServer/rpc/base"
 	"github.com/GodSlave/MyGoServer/rpc"
 	"strings"
@@ -99,7 +98,6 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	conf.LoadConfig(f.Name()) //加载配置文件
 	app.Configure(conf.Conf)  //配置信息
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
-
 	log.Info("server %v starting up at %v", app.version, time.Now().Unix())
 	log.Debug("start connect DB %v", conf.Conf.DB.SQL)
 
@@ -121,8 +119,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 
 	log.Info("start register module %v", conf.Conf.DB.SQL)
 	app.moduleManger = basemodule.NewModuleManager()
-	app.moduleManger.RegisterRunMod(modules.TimerModule())
-
+	//app.moduleManger.RegisterRunMod(modules.TimerModule())
 	// module
 	for i := 0; i < len(mods); i++ {
 		app.moduleManger.Register(mods[i])

@@ -187,12 +187,8 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 					m.updateModuleInfos(appInfo)
 
 				case OnUnRegister:
-					name := ""
-					err := json.Unmarshal(callInfo.RpcInfo.Args, name)
-					if err != nil {
-						panic(err)
-					}
-
+					name := string(callInfo.RpcInfo.Args)
+					m.removeApplication(name)
 				case UpdateStatus:
 					log.Info("update status %s", string(callInfo.RpcInfo.Args))
 					apps := []AppStatus{}
@@ -345,7 +341,6 @@ func (m DefaultMasterClient) reportStatus() {
 			statistical, _ := rpcModule.GetStatistical()
 			var load int32
 			load = int32(rpcModule.GetExecuting())
-
 			allLoad += load
 			moduleInfo[index] = ModuleStatus{
 				ModuleName:  subModule.Mi.GetType(),

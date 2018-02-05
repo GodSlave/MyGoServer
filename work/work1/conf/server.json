@@ -6,11 +6,17 @@
     //是否启动Master功能,如果为true,进程会每个三秒向Master模块汇报其所在模块运行信息
     "ISRealMaster": true,
     //记录统计信息
-    "SQlUrl": "develop:Woaini123!@tcp(192.168.0.74:3306)/statistic?charset=utf8",
+    "DBConfig": {
+      "DBName": "stastic",
+      "UserName": "develop",
+      "Password": "Woaini123!",
+      "Addr": "http://192.168.0.74:8086",
+      "Precision": ""
+    },
     "RedisUrl": "redis://192.168.0.74:6379/2",
-    "RedisPubSubConf":{
+    "RedisPubSubConf": {
       "Uri": "redis://192.168.0.74:6379/2",
-      "Queue":"APPTrans"
+      "Queue": "APPTrans"
     },
     //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
     "MasterType": "Master"

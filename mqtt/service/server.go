@@ -480,6 +480,12 @@ func (this *Server) getSession(svc *Service, req *message.ConnectMessage, resp *
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (this *Server) GetConnectUser() int64 {
+	if this.sessMgr == nil {
+		return 0
+	}
+	return int64(this.Services.Size())
 }
