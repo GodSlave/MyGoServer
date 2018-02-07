@@ -37,7 +37,7 @@ func NewLocalClient(server mqrpc.LocalServer) (*LocalClient, error) {
 	client.callinfos = utils.NewBeeMap()
 	client.local_server = server
 	client.done = make(chan error)
-	client.result_chan = make(chan rpcpb.ResultInfo,50)
+	client.result_chan = make(chan rpcpb.ResultInfo, 50)
 	go client.on_response_handle(client.result_chan, client.done)
 	client.on_timeout_handle(nil) //处理超时请求的协程
 	return client, nil
@@ -115,7 +115,7 @@ func (c *LocalClient) on_timeout_handle(args interface{}) {
 		for key, clinetCallInfo := range c.callinfos.Items() {
 			if clinetCallInfo != nil {
 				var clinetCallInfo = clinetCallInfo.(ClinetCallInfo)
-				if clinetCallInfo.timeout < (time.Now().UnixNano() / 1000000) {
+				if clinetCallInfo.timeout < time.Now().Unix() {
 					//已经超时了
 					resultInfo := &rpcpb.ResultInfo{
 						Result: nil,
@@ -161,5 +161,3 @@ func (c *LocalClient) on_response_handle(deliveries <-chan rpcpb.ResultInfo, don
 		}
 	}
 }
-
-

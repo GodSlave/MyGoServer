@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/GodSlave/MyGoServer/log"
-	"github.com/GodSlave/MyGoServer/module/modules/timer"
 	"github.com/golang/protobuf/proto"
 	"github.com/GodSlave/MyGoServer/utils"
 	"sync"
@@ -27,53 +26,65 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc/util"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/base"
+	"container/list"
 )
 
 type RedisClient struct {
 	//callInfos map[string]*ClinetCallInfo
 	callInfos         *utils.BeeMap
-	cmutex            sync.Mutex //操作callinfos的锁
+	cmutex            sync.Mutex //操作
+	callLog           *list.List
 	psc               redis.PubSubConn
 	info              *conf.Redis
 	queueName         string
 	callbackQueueName string
 	done              chan error
+	ticker            *time.Ticker
+	timeoutResponse   *rpcpb.ResultInfo
 }
 
-func createQueueName()string{
+type CallLogInfo struct {
+	time int64  //放入时间
+	cid  string //请求id
+}
+
+func createQueueName() string {
 	//return "callbackQueueName"
-	return fmt.Sprintf("callbackQueueName:%d",time.Now().Nanosecond())
+	return fmt.Sprintf("callbackQueueName:%d", time.Now().Nanosecond())
 }
 func NewRedisClient(info *conf.Redis) (client *RedisClient, err error) {
 	var url = info.Uri
 	client = new(RedisClient)
 	client.callInfos = utils.NewBeeMap()
-	client.info=info
+	client.info = info
 	client.callbackQueueName = createQueueName()
 	client.queueName = info.Queue
 	client.done = make(chan error)
 	psc := redis.PubSubConn{Conn: utils.GetRedisFactory().GetPool(url).Get()}
 	psc.Subscribe(client.callbackQueueName)
 
-	pool:=utils.GetRedisFactory().GetPool(info.Uri).Get()
+	pool := utils.GetRedisFactory().GetPool(info.Uri).Get()
 	defer pool.Close()
-	_, errs:=pool.Do("EXPIRE", client.callbackQueueName, 60)
+	_, errs := pool.Do("EXPIRE", client.callbackQueueName, 60)
 	if errs != nil {
 		log.Warning(errs.Error())
 	}
 	client.psc = psc
 	go client.on_response_handle(client.done)
-	client.on_timeout_handle(nil) //处理超时请求的协程
+	client.ticker = time.NewTicker(time.Second * 1)
+	client.callLog = list.New()
+	client.timeoutResponse = &rpcpb.ResultInfo{
+		Result:     nil,
+		Error:      base.ErrRequestTimeout.Desc,
+		ErrorCode:  base.ErrRequestTimeout.ErrorCode,
+		ResultType: argsutil.NULL,
+	}
+	client.handTimeOut()
 	return client, nil
-	//log.Printf("shutting down")
-	//
-	//if err := c.Shutdown(); err != nil {
-	//	log.Fatalf("error during shutdown: %s", err)
-	//}
 }
 
 func (c *RedisClient) Done() (err error) {
-	pool:=utils.GetRedisFactory().GetPool(c.info.Uri).Get()
+	pool := utils.GetRedisFactory().GetPool(c.info.Uri).Get()
 	defer pool.Close()
 	//关闭amqp链接通道
 	c.psc.Unsubscribe(c.callbackQueueName)
@@ -90,6 +101,10 @@ func (c *RedisClient) Done() (err error) {
 		}
 	}
 	c.callInfos = nil
+	if c.ticker != nil {
+		c.ticker.Stop()
+		log.Error("stopped ticker")
+	}
 	return
 }
 
@@ -97,22 +112,24 @@ func (c *RedisClient) Done() (err error) {
 消息请求
 */
 func (c *RedisClient) Call(callInfo mqrpc.CallInfo, callback chan rpcpb.ResultInfo) error {
-	pool:=utils.GetRedisFactory().GetPool(c.info.Uri).Get()
+	pool := utils.GetRedisFactory().GetPool(c.info.Uri).Get()
 	defer pool.Close()
 	var err error
 	if c.callInfos == nil {
 		return fmt.Errorf("RedisClient is closed")
 	}
-	callInfo.RpcInfo.ReplyTo=c.callbackQueueName
+	callInfo.RpcInfo.ReplyTo = c.callbackQueueName
 	var correlation_id = callInfo.RpcInfo.Cid
-
 	clientCallInfo := &ClinetCallInfo{
 		correlation_id: correlation_id,
 		call:           callback,
 		timeout:        callInfo.RpcInfo.Expired,
 	}
 	c.callInfos.Set(correlation_id, *clientCallInfo)
-
+	c.callLog.PushBack(&CallLogInfo{
+		time: callInfo.RpcInfo.Expired,
+		cid:  correlation_id,
+	})
 	body, err := c.Marshal(&callInfo.RpcInfo)
 	if err != nil {
 		return err
@@ -130,7 +147,7 @@ func (c *RedisClient) Call(callInfo mqrpc.CallInfo, callback chan rpcpb.ResultIn
 消息请求 不需要回复
 */
 func (c *RedisClient) CallNR(callInfo mqrpc.CallInfo) error {
-	pool:=utils.GetRedisFactory().GetPool(c.info.Uri).Get()
+	pool := utils.GetRedisFactory().GetPool(c.info.Uri).Get()
 	defer pool.Close()
 	var err error
 
@@ -146,37 +163,6 @@ func (c *RedisClient) CallNR(callInfo mqrpc.CallInfo) error {
 	return nil
 }
 
-func (c *RedisClient) on_timeout_handle(args interface{}) {
-	if c.callInfos != nil {
-		//处理超时的请求
-		for key, clinetCallInfo := range c.callInfos.Items() {
-			if clinetCallInfo != nil {
-				var clinetCallInfo = clinetCallInfo.(ClinetCallInfo)
-				if clinetCallInfo.timeout < (time.Now().UnixNano() / 1000000) {
-					//已经超时了
-					resultInfo := &rpcpb.ResultInfo{
-						Result: nil,
-						Error:  base.ErrRequestTimeout.Desc,
-						ErrorCode: base.ErrRequestTimeout.ErrorCode,
-						ResultType:argsutil.NULL,
-					}
-					//发送一个超时的消息
-					clinetCallInfo.call <- *resultInfo
-					//关闭管道
-					close(clinetCallInfo.call)
-					//从Map中删除
-					c.callInfos.Delete(key)
-				}
-
-			}
-		}
-		timer.SetTimer(1, c.on_timeout_handle, nil)
-	}
-}
-
-
-
-
 /**
 接收应答信息
 */
@@ -184,7 +170,7 @@ func (c *RedisClient) on_response_handle(done chan error) {
 	for {
 		switch v := c.psc.Receive().(type) {
 		case redis.Message:
-			resultInfo,err := c.UnmarshalResult(v.Data)
+			resultInfo, err := c.UnmarshalResult(v.Data)
 			if err != nil {
 				log.Error("Unmarshal faild", err)
 			} else {
@@ -194,10 +180,11 @@ func (c *RedisClient) on_response_handle(done chan error) {
 					clinetCallInfo.(ClinetCallInfo).call <- *resultInfo
 				}
 				//删除
+				//log.Debug("remove %s", correlation_id)
 				c.callInfos.Delete(correlation_id)
 			}
 		case redis.PMessage:
-			resultInfo,err := c.UnmarshalResult(v.Data)
+			resultInfo, err := c.UnmarshalResult(v.Data)
 			if err != nil {
 				log.Error("Unmarshal faild", err)
 			} else {
@@ -207,12 +194,13 @@ func (c *RedisClient) on_response_handle(done chan error) {
 					clinetCallInfo.(ClinetCallInfo).call <- *resultInfo
 				}
 				//删除
+				log.Info("remove %s", correlation_id)
 				c.callInfos.Delete(correlation_id)
 			}
 		case redis.Subscription:
 			log.Info("%s: %s %d\n", v.Channel, v.Kind, v.Count)
 		case error:
-			log.Error("on_response_handle",v.Error())
+			log.Error("on_response_handle", v.Error())
 			return
 		default:
 
@@ -220,6 +208,39 @@ func (c *RedisClient) on_response_handle(done chan error) {
 
 	}
 	log.Debug("finish on_response_handle")
+}
+
+func (c *RedisClient) handTimeOut() {
+	go func() {
+		for {
+			select {
+			case <-c.ticker.C:
+			Skip:
+				for {
+					first := c.callLog.Front()
+					if first != nil {
+						callInfo := first.Value.(*CallLogInfo)
+						if time.Now().Unix() > callInfo.time {
+							c.callLog.Remove(first)
+							//发送一个超时的消息
+							value := c.callInfos.Get(callInfo.cid)
+							if value != nil {
+								var clientCallInfo = value.(ClinetCallInfo)
+								if clientCallInfo.call != nil {
+									clientCallInfo.call <- *c.timeoutResponse
+								}
+								c.callInfos.Delete(callInfo.cid)
+							}
+						} else {
+							break Skip
+						}
+					} else {
+						break Skip
+					}
+				}
+			}
+		}
+	}()
 }
 
 func (c *RedisClient) UnmarshalResult(data []byte) (*rpcpb.ResultInfo, error) {
@@ -244,7 +265,6 @@ func (c *RedisClient) Unmarshal(data []byte) (*rpcpb.RPCInfo, error) {
 	} else {
 		return &rpcInfo, err
 	}
-
 	panic("bug")
 }
 

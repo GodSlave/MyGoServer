@@ -33,8 +33,8 @@ type DefaultMasterClient struct {
 	moduleManager    *basemodule.ModuleManager
 }
 
-func NewMasterClient(config conf.Master, appName string, app module.App, moduleManage *basemodule.ModuleManager) DefaultMasterClient {
-	m := DefaultMasterClient{}
+func NewMasterClient(config conf.Master, appName string, app module.App, moduleManage *basemodule.ModuleManager) *DefaultMasterClient {
+	m := &DefaultMasterClient{}
 	m.app = app
 	m.moduleManager = moduleManage
 	m.lock = new(sync.RWMutex)
@@ -63,15 +63,15 @@ func NewMasterClient(config conf.Master, appName string, app module.App, moduleM
 	return m
 }
 
-func (m DefaultMasterClient) SetShutDownCallBack(callback ShutDownCallBack) {
+func (m *DefaultMasterClient) SetShutDownCallBack(callback ShutDownCallBack) {
 	m.shutDownCallBack = callback
 }
 
-func (m DefaultMasterClient) SetUpdateApplicationListCallBack(callback UpdateApplicationListCallBack) {
+func (m *DefaultMasterClient) SetUpdateApplicationListCallBack(callback UpdateApplicationListCallBack) {
 	m.updateCallBack = callback
 }
 
-func (m DefaultMasterClient) GetModule(module string) *module.ServerSession {
+func (m *DefaultMasterClient) GetModule(module string) *module.ServerSession {
 	modules := m.moduleInfo[module]
 	if modules != nil && len(modules) > 0 {
 		if len(modules) > 1 {
@@ -91,12 +91,11 @@ func (m DefaultMasterClient) GetModule(module string) *module.ServerSession {
 		} else {
 			return modules[0].serverSession
 		}
-
 	}
 	return nil
 }
 
-func (m DefaultMasterClient) GetModuleByByte(appByteName byte) *module.ServerSession {
+func (m *DefaultMasterClient) GetModuleByByte(appByteName byte) *module.ServerSession {
 	modules := m.moduleInfoByte[appByteName]
 	if modules != nil && len(modules) > 0 {
 		if len(modules) > 1 {
@@ -120,17 +119,17 @@ func (m DefaultMasterClient) GetModuleByByte(appByteName byte) *module.ServerSes
 	return nil
 }
 
-func (m DefaultMasterClient) Shutdown() {
+func (m *DefaultMasterClient) Shutdown() {
 	//TODO
 	m.publicMessage(Bye, m.Name, Bye)
 }
 
-func (m DefaultMasterClient) ToShutdown() {
+func (m *DefaultMasterClient) ToShutdown() {
 	m.shutDownCallBack()
 	//TODO
 }
 
-func (m DefaultMasterClient) RegisterToServer() {
+func (m *DefaultMasterClient) RegisterToServer() {
 	time.Sleep(1 * time.Second)
 	appInfo := &ApplicationInfo{
 		Name:    m.Name,
@@ -140,7 +139,7 @@ func (m DefaultMasterClient) RegisterToServer() {
 	m.publicMessage(GetAppList, m.Name, m.Name)
 }
 
-func (m DefaultMasterClient) buildDefaultCallInfo(functionName string, from string, args []byte) *mqrpc.CallInfo {
+func (m *DefaultMasterClient) buildDefaultCallInfo(functionName string, from string, args []byte) *mqrpc.CallInfo {
 	m.callId += 1
 	callInfo := mqrpc.CallInfo{
 		RpcInfo: rpcpb.RPCInfo{
@@ -150,12 +149,13 @@ func (m DefaultMasterClient) buildDefaultCallInfo(functionName string, from stri
 			Reply:     false,
 			SessionId: from,
 			ByteFn:    m.versionCode,
+			Expired:   time.Now().Unix() + 3,
 		},
 	}
 	return &callInfo;
 }
 
-func (m DefaultMasterClient) publicMessage(funcName string, from string, obj interface{}) {
+func (m *DefaultMasterClient) publicMessage(funcName string, from string, obj interface{}) {
 	var arg []byte
 	if obj != nil {
 		var err error
@@ -169,11 +169,12 @@ func (m DefaultMasterClient) publicMessage(funcName string, from string, obj int
 	m.rpcClient.Call(*callInfo, m.callback_chan)
 }
 
-func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallChan chan mqrpc.CallInfo) {
+func (m *DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallChan chan mqrpc.CallInfo) {
 	for {
 		select {
 		case callInfo := <-callChan:
 			from := callInfo.RpcInfo.ReplyTo
+			//log.Info("rec  %s  %s  %s", from,callInfo.RpcInfo.Fn, string(callInfo.RpcInfo.Args))
 			if from != m.Name {
 				funcName := callInfo.RpcInfo.Fn
 				switch funcName {
@@ -190,7 +191,6 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 					name := string(callInfo.RpcInfo.Args)
 					m.removeApplication(name)
 				case UpdateStatus:
-					log.Info("update status %s", string(callInfo.RpcInfo.Args))
 					apps := []AppStatus{}
 					err := json.Unmarshal(callInfo.RpcInfo.Args, &apps)
 					if err != nil {
@@ -216,7 +216,7 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 
 		case selfCallInfo := <-selfCallChan:
 			funcName := selfCallInfo.RpcInfo.Fn
-			log.Info(funcName)
+			//log.Info("rec %s %s",funcName, string(selfCallInfo.RpcInfo.Args))
 			switch funcName {
 			case GetAppList:
 				infos := []*ApplicationInfo{}
@@ -244,7 +244,7 @@ func (m DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCallC
 	}
 }
 
-func (m DefaultMasterClient) updateModuleInfos(appInfo *ApplicationInfo) {
+func (m *DefaultMasterClient) updateModuleInfos(appInfo *ApplicationInfo) {
 	if appInfo.Name != m.Name {
 		for moduleName, modules := range appInfo.Modules {
 			for _, module := range modules {
@@ -279,7 +279,7 @@ func (m DefaultMasterClient) updateModuleInfos(appInfo *ApplicationInfo) {
 	}
 }
 
-func (m DefaultMasterClient) checkToRemoveFromCacheModule(moduleInfo *OtherModuleInfo) {
+func (m *DefaultMasterClient) checkToRemoveFromCacheModule(moduleInfo *OtherModuleInfo) {
 	m.lock.Lock()
 	for key, value := range m.moduleInfo {
 		for index, inModuleInfo := range value {
@@ -298,7 +298,7 @@ func (m DefaultMasterClient) checkToRemoveFromCacheModule(moduleInfo *OtherModul
 	m.lock.Unlock()
 }
 
-func (m DefaultMasterClient) removeApplication(name string) {
+func (m *DefaultMasterClient) removeApplication(name string) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for key, value := range m.moduleInfo {
@@ -318,7 +318,7 @@ func (m DefaultMasterClient) removeApplication(name string) {
 	}
 }
 
-func (m DefaultMasterClient) tick() {
+func (m *DefaultMasterClient) tick() {
 	for {
 		time.Sleep(1 * time.Second)
 		m.reportStatus()
@@ -326,7 +326,7 @@ func (m DefaultMasterClient) tick() {
 
 }
 
-func (m DefaultMasterClient) reportStatus() {
+func (m *DefaultMasterClient) reportStatus() {
 	moduleInfo := make([]ModuleStatus, len(m.moduleManager.GetModules()))
 	var allLoad int32
 	var allProcessingNumbers int32

@@ -17,21 +17,20 @@ import (
 
 type DefaultMasterServer struct {
 	Master
-	redisPool     *redis.Pool
-	rpcClient     *defaultrpc.RedisClient
-	rpcServer     *defaultrpc.RedisServer
-	infos         map[string]ApplicationInfo
-	status        map[string]AppStatus
-	appRpcClient  map[string]*defaultrpc.RedisClient
-	callback_chan chan rpcpb.ResultInfo
-	call_chan     chan mqrpc.CallInfo
-	serverId      string
-	callId        int
-	versionCode   int32
-	masterConfig  conf.Master
-	Modules       map[string][]OtherModuleInfo
-	appLostCheck  map[string]int
-	client        client.Client
+	redisPool    *redis.Pool
+	rpcClient    *defaultrpc.RedisClient
+	rpcServer    *defaultrpc.RedisServer
+	infos        map[string]ApplicationInfo
+	status       map[string]AppStatus
+	appRpcClient map[string]*defaultrpc.RedisClient
+	call_chan    chan mqrpc.CallInfo
+	serverId     string
+	callId       int
+	versionCode  int32
+	masterConfig conf.Master
+	Modules      map[string][]OtherModuleInfo
+	appLostCheck map[string]int
+	client       client.Client
 }
 
 func NewMaster(serverId string, masterConf conf.Master) Master {
@@ -63,7 +62,6 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 	master.rpcClient, _ = defaultrpc.NewRedisClient(masterConf.RedisPubSubConf)
 	master.call_chan = make(chan mqrpc.CallInfo, 10)
 	master.rpcServer, _ = defaultrpc.NewRedisServer(masterConf.RedisPubSubConf, master.call_chan)
-	master.callback_chan = make(chan rpcpb.ResultInfo, 10)
 
 	go master.checkReceiverMessage()
 	go master.tickServerStatus()
@@ -134,6 +132,7 @@ func (m *DefaultMasterServer) buildDefaultCallInfo(functionName string, from str
 			Reply:     false,
 			SessionId: from,
 			ByteFn:    m.versionCode,
+			Expired:   time.Now().Unix() + 3,
 		},
 	}
 
@@ -151,7 +150,7 @@ func (m *DefaultMasterServer) publicMessage(funcName string, from string, obj in
 	}
 	log.Info("published %s ", string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
-	client.Call(*callInfo, m.callback_chan)
+	client.Call(*callInfo, nil)
 }
 
 func (m *DefaultMasterServer) checkReceiverMessage() {

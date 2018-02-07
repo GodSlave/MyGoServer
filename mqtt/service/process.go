@@ -410,7 +410,9 @@ func (this *Service) onPublish(msg *message.PublishMessage) error {
 	msg.SetRetain(false)
 	topic := msg.Topic()
 	if (topic[0] == 'i' || topic[0] == 'f' ) && this.msgProcess != nil {
-		this.msgProcess.OnNewMessage(msg, this.sess)
+		go func() {
+			this.msgProcess.OnNewMessage(msg, this.sess)
+		}()
 	} else {
 		//log.Debug("(%s) Publishing to topic %q and %d subscribers", this.cid(), string(msg.Topic()), len(this.subs))
 		for _, s := range this.subs {

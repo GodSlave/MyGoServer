@@ -142,7 +142,6 @@ func (this *Service) start() error {
 	if err != nil {
 		return err
 	}
-
 	// If this is a server
 	if !this.client {
 		// Creat the onPublishFunc so it can be used for published messages
@@ -192,7 +191,7 @@ func (this *Service) start() error {
 // calls this, and closes the buffers, somehow it causes buffer.go:476 to panid.
 func (this *Service) stop() {
 	defer func() {
-		if this.msgProcess!=nil{
+		if this.msgProcess != nil {
 			this.msgProcess.OnDisConnect(this.sess)
 		}
 		// Let's recover from panic
@@ -200,7 +199,6 @@ func (this *Service) stop() {
 			log.Error("(%s) Recovering from panic: %v", this.cid(), r)
 		}
 	}()
-
 	doit := atomic.CompareAndSwapInt64(&this.closed, 0, 1)
 	if !doit {
 		return

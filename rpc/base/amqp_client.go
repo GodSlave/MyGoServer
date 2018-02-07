@@ -187,7 +187,7 @@ func (c *AMQPClient) on_timeout_handle(args interface{}) {
 		for key, clinetCallInfo := range c.callinfos.Items() {
 			if clinetCallInfo != nil {
 				var clinetCallInfo = clinetCallInfo.(ClinetCallInfo)
-				if clinetCallInfo.timeout < (time.Now().UnixNano() / 1000000) {
+				if clinetCallInfo.timeout < time.Now().Unix() {
 					//已经超时了
 					resultInfo := &rpcpb.ResultInfo{
 						Result:     nil,

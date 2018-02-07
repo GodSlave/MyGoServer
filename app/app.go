@@ -100,9 +100,9 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	log.Init(conf.Conf.Debug, *ProcessID, *Logdir)
 	log.Info("server %v starting up at %v", app.version, time.Now().Unix())
 	log.Debug("start connect DB %v", conf.Conf.DB.SQL)
-
 	app.userManager = InitUserManager(app, conf.Conf.OnlineLimit)
 
+	
 	//sql
 	sql := db.BaseSql{
 	}
@@ -154,7 +154,6 @@ func (app *DefaultApp) Route(moduleType string, fn func(app module.App, Type str
 }
 func (app *DefaultApp) getRoute(moduleType string) func(app module.App, Type string, hash string) module.ServerSession {
 	fn := app.routes[moduleType]
-
 	if fn == nil {
 		//如果没有设置的路由,则使用默认的
 		return app.defaultRoutes

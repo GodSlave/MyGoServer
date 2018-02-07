@@ -41,9 +41,6 @@ func NewRPCClient(app module.App, serverId string) (mqrpc.RPCClient, error) {
 	return rpc_client, nil
 }
 
-
-
-
 func (c *RPCClient) NewRabbitmqClient(info *conf.Rabbitmq) (err error) {
 	//创建本地连接
 	if info != nil && c.remote_client == nil {
@@ -108,7 +105,7 @@ func (c *RPCClient) CallByteArgs(_func byte, SessionId string, args []byte) ([]b
 	rpcInfo := &rpcpb.RPCInfo{
 		ByteFn:    *proto.Int32(int32(_func)),
 		Reply:     *proto.Bool(true),
-		Expired:   *proto.Int64((time.Now().UTC().Add(time.Second * time.Duration(c.app.GetSettings().Rpc.RpcExpired)).UnixNano()) / 1000000),
+		Expired:   *proto.Int64(time.Now().Add((time.Second + 1) * time.Duration(c.app.GetSettings().Rpc.RpcExpired)).Unix()),
 		Cid:       *proto.String(correlation_id),
 		SessionId: *proto.String(SessionId),
 		Args:      args,
@@ -133,18 +130,20 @@ func (c *RPCClient) processCallInfo(rpcInfo *rpcpb.RPCInfo) ([]byte, *base.Error
 		log.Error("rpc service (%s) connection failed", c.serverId)
 		return nil, base.ErrServerIsDown
 	}
+	select {
+	case resultInfo, ok := <-callback:
+		if !ok {
+			log.Error("client closed")
+			return nil, base.ErrServerIsDown
+		}
 
-	resultInfo, ok := <-callback
-	if !ok {
-		log.Error("client closed")
-		return nil, base.ErrServerIsDown
+		if err != nil {
+			log.Error(err.Error())
+			return nil, base.ErrInternal
+		}
+		return resultInfo.Result, base.NewError(resultInfo.ErrorCode, resultInfo.Error)
 	}
 
-	if err != nil {
-		log.Error(err.Error())
-		return nil, base.ErrInternal
-	}
-	return resultInfo.Result, base.NewError(resultInfo.ErrorCode, resultInfo.Error)
 }
 
 func (c *RPCClient) CallNRArgs(_func string, SessionID string, args []byte) (err error) {
