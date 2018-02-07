@@ -1,17 +1,25 @@
 {
   "Debug": true,
   "OnlineLimit": 8000,
+  "Name": "master",
   "Master": {
-    //是否启动Master功能,如果为true,进程会每个三秒向Master模块汇报其所在模块运行信息
-    "Enable": false,
+    //是否是master模块
+    "ISRealMaster": true,
     //记录统计信息
-    "SQL": "",
+    "DBConfig": {
+      "DBName": "stastic",
+      "UserName": "develop",
+      "Password": "Woaini123!",
+      "Addr": "http://192.168.0.74:8086",
+      "Precision": ""
+    },
+    "RedisUrl": "redis://192.168.0.74:6379/2",
+    "RedisPubSubConf": {
+      "Uri": "redis://192.168.0.74:6379/2",
+      "Queue": "APPTrans"
+    },
     //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
-    "MasterType": "Master",
-    //web静态文件路径
-    "WebRoot": "/work/go/mqantserver/bin/console",
-    //web控制台监听端口
-    "WebHost": "0.0.0.0:8686"
+    "MasterType": "Master"
   },
   "Module": {
     "Gate": [
@@ -31,14 +39,11 @@
       {
         "Id": "User001",
         "ByteId": 2,
-        "ProcessID": "development"
-      }
-    ],
-    "User": [
-      {
-        "Id": "User002",
-        "ByteId": 2,
-        "ProcessID": "development"
+        "ProcessID": "development",
+        "Redis": {
+          "Uri": "redis://192.168.0.74:6379/1",
+          "Queue": "work3-User001"
+        }
       }
     ]
   },
@@ -48,13 +53,9 @@
   },
   "DB": {
     "DBtype": "mysql",
-    "SQL": "root:woaini123@tcp(172.16.6.196:3306)/gameserver?charset=utf8",
-    "Redis": "redis://172.16.6.196:6379/1",
-    //多个进程间同步app信息
-    "Redis_Queue": "APP"
+    "SQL": "develop:Woaini123!@tcp(192.168.0.74:3306)/gameserver?charset=utf8",
+    "Redis": "redis://192.168.0.74:6379/1"
   },
-  //用于md5加盐
-  "PrivateKey": "bb7b5ccf-9692-4906-9359-f7b168b7f9ddd82e9f3f-cbfb-4831-b55c-44e1c887c039924da77e-0e8b-44ad-a5ff-079fdae24f1d",
   //是否启用加密传输
   "Secret": true
 }
