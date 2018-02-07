@@ -197,7 +197,7 @@ func (s *RPCServer) on_call_handle(calls <-chan mqrpc.CallInfo, callbacks chan<-
 			if !ok {
 				calls = nil
 			} else {
-				if callInfo.RpcInfo.Expired < (time.Now().UnixNano() / 1000000) {
+				if callInfo.RpcInfo.Expired < (time.Now().Unix()) {
 					//请求超时了,无需再处理
 					if s.listener != nil {
 						s.listener.OnTimeOut(callInfo.RpcInfo.Fn, callInfo.RpcInfo.ByteFn, callInfo.RpcInfo.Expired)

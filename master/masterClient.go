@@ -216,7 +216,7 @@ func (m *DefaultMasterClient) startListen(callChan chan mqrpc.CallInfo, selfCall
 
 		case selfCallInfo := <-selfCallChan:
 			funcName := selfCallInfo.RpcInfo.Fn
-			//log.Info("rec %s %s",funcName, string(selfCallInfo.RpcInfo.Args))
+			log.Info("rec %s -- %s", funcName, string(selfCallInfo.RpcInfo.Args))
 			switch funcName {
 			case GetAppList:
 				infos := []*ApplicationInfo{}
