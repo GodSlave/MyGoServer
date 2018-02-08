@@ -95,6 +95,7 @@ func (m *BaseModule) OnDestroy() {
 func (m *BaseModule) SetListener(listener mqrpc.RPCListener) {
 	m.listener = listener
 }
+
 func (m *BaseModule) GetModuleSettings() *conf.ModuleSettings {
 	return m.settings
 }
@@ -145,6 +146,7 @@ func (m *BaseModule) OnTimeOut(fn string, byteFn int32, Expired int64) {
 		m.listener.OnTimeOut(fn, byteFn, Expired)
 	}
 }
+
 func (m *BaseModule) OnError(fn string, callInfo *mqrpc.CallInfo, err error) {
 	m.rwmutex.RLock()
 	if statisticalMethod, ok := m.statistical[fn]; ok {

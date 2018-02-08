@@ -114,6 +114,10 @@ func (mer *ModuleManager) GetModules() []*DefaultModule {
 	return mer.mods
 }
 
+func (mer *ModuleManager) GetRunModules() []*DefaultModule {
+	return mer.runMods
+}
+
 func (mer *ModuleManager) ReportStatistics(args interface{}) {
 	//if mer.app.GetSettings().Master.Enable {
 	//	for _, m := range mer.runMods {

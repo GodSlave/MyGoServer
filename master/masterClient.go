@@ -164,7 +164,7 @@ func (m *DefaultMasterClient) publicMessage(funcName string, from string, obj in
 			log.Error(err.Error())
 		}
 	}
-//	log.Info(string(arg))
+	//	log.Info(string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
 	m.rpcClient.Call(*callInfo, m.callback_chan)
 }
@@ -327,10 +327,10 @@ func (m *DefaultMasterClient) tick() {
 }
 
 func (m *DefaultMasterClient) reportStatus() {
-	moduleInfo := make([]ModuleStatus, len(m.moduleManager.GetModules()))
+	moduleInfo := make([]ModuleStatus, len(m.moduleManager.GetRunModules()))
 	var allLoad int32
 	var allProcessingNumbers int32
-	for index, subModule := range m.moduleManager.GetModules() {
+	for index, subModule := range m.moduleManager.GetRunModules() {
 		m := subModule.Mi
 		if m == nil {
 			log.Error("Module is nil")
@@ -347,7 +347,6 @@ func (m *DefaultMasterClient) reportStatus() {
 				Load:        load,
 				MethodLoads: statistical,
 			}
-
 			allProcessingNumbers += load
 		}
 	}

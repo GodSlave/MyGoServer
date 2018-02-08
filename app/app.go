@@ -142,7 +142,7 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 		app.moduleManger.Register(mods[i])
 	}
 
-	if conf.Conf.Master.ISRealMaster {
+	if conf.Conf.Master.ISRealMaster && conf.Conf.Master.Enable {
 		app.masterServer = master.NewMaster(conf.Conf.Name, conf.Conf.Master)
 	}
 	if conf.Conf.Master.Enable {
