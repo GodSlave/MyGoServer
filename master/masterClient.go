@@ -164,7 +164,7 @@ func (m *DefaultMasterClient) publicMessage(funcName string, from string, obj in
 			log.Error(err.Error())
 		}
 	}
-	log.Info(string(arg))
+//	log.Info(string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
 	m.rpcClient.Call(*callInfo, m.callback_chan)
 }

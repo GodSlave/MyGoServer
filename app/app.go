@@ -21,6 +21,8 @@ import (
 	"time"
 	"github.com/GodSlave/MyGoServer/master"
 	"os/signal"
+	"math"
+	"hash/crc32"
 )
 
 type DefaultApp struct {
@@ -56,6 +58,14 @@ func NewApp() module.App {
 			if serverSession != nil {
 				return *serverSession
 			}
+		} else {
+			servers := app.GetServersByType(Type)
+			if len(servers) == 0 {
+				log.Error("no smodule find %s", Type)
+				return nil
+			}
+			index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
+			return servers[index]
 		}
 		return nil
 	}
@@ -64,6 +74,14 @@ func NewApp() module.App {
 		log.Error("new call  ")
 		if newApp.masterClient != nil {
 			return *newApp.masterClient.GetModuleByByte(Type)
+		} else {
+			servers := app.GetServersByByteType(Type)
+			if len(servers) == 0 {
+				log.Error("no module find %v", Type)
+				return nil
+			}
+			index := int(math.Abs(float64(crc32.ChecksumIEEE([]byte(hash))))) % len(servers)
+			return servers[index]
 		}
 		return nil
 	}
@@ -102,7 +120,6 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	log.Debug("start connect DB %v", conf.Conf.DB.SQL)
 	app.userManager = InitUserManager(app, conf.Conf.OnlineLimit)
 
-	
 	//sql
 	sql := db.BaseSql{
 	}
@@ -117,10 +134,10 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	app.redisPool = utils.GetRedisFactory().GetPool(url)
 	defer app.redisPool.Close()
 
+	// module
 	log.Info("start register module %v", conf.Conf.DB.SQL)
 	app.moduleManger = basemodule.NewModuleManager()
-	//app.moduleManger.RegisterRunMod(modules.TimerModule())
-	// module
+
 	for i := 0; i < len(mods); i++ {
 		app.moduleManger.Register(mods[i])
 	}
@@ -128,7 +145,9 @@ func (app *DefaultApp) Run(mods ...module.Module) error {
 	if conf.Conf.Master.ISRealMaster {
 		app.masterServer = master.NewMaster(conf.Conf.Name, conf.Conf.Master)
 	}
-	app.masterClient = master.NewMasterClient(conf.Conf.Master, conf.Conf.Name, app, app.moduleManger)
+	if conf.Conf.Master.Enable {
+		app.masterClient = master.NewMasterClient(conf.Conf.Master, conf.Conf.Name, app, app.moduleManger)
+	}
 
 	app.OnInit(app.settings)
 	app.moduleManger.Init(app, *ProcessID)

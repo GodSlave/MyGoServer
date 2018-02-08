@@ -148,7 +148,7 @@ func (m *DefaultMasterServer) publicMessage(funcName string, from string, obj in
 			log.Error(err.Error())
 		}
 	}
-	log.Info("published %s ", string(arg))
+//	log.Info("published %s ", string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
 	client.Call(*callInfo, nil)
 }

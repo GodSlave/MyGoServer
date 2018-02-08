@@ -116,6 +116,7 @@ type Master struct {
 	RedisUrl        string
 	DBConfig        *InfluxDBConfig
 	RedisPubSubConf *Redis
+	Enable          bool
 }
 
 type InfluxDBConfig struct {

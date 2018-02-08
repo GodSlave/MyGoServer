@@ -59,7 +59,7 @@ func (m *Gate) OnInit(app module.App, settings *conf.ModuleSettings) {
 func (m *Gate) Run(closeSig chan bool) {
 
 	m.svr = &service.Server{
-		KeepAlive:        300,           // seconds
+		KeepAlive:        15,           // seconds
 		ConnectTimeout:   2,             // seconds
 		SessionsProvider: "mem",         // keeps sessions in memory
 		Authenticator:    "mockSuccess", // always succeed

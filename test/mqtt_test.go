@@ -39,7 +39,7 @@ func TestUUID(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	numberOfClient := 10000
+	numberOfClient := 1
 	wg := sync.WaitGroup{}
 	wg.Add(numberOfClient)
 	for i := 0; i < numberOfClient; i++ {
