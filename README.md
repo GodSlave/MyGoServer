@@ -1,5 +1,7 @@
 ## 概述
 
+
+
 Go游戏服务器  使用了 protoBuf  MQTT 等协议
 在mqant基础上进行了部分改进
 
@@ -7,6 +9,8 @@ Go游戏服务器  使用了 protoBuf  MQTT 等协议
 2. 内置redis,MySQL 数据存储支持
 3. 内置基本的用户模块  
 
+
+Demo[如何使用](https://github.com/GodSlave/MyGoServer/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%E8%BF%99%E4%B8%AA%E9%A1%B9%E7%9B%AE)
 
 游戏业务服务使用MQTT与客户端通讯，
 MQTT服务端使用surgeMQ 并为了安全性和包大小考虑做了一部分修改
