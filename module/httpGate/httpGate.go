@@ -8,6 +8,8 @@ import (
 	"github.com/GodSlave/MyGoServer/log"
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"github.com/GodSlave/MyGoServer/utils/uuid"
 )
 
 type HttpHandler struct {
@@ -16,28 +18,51 @@ type HttpHandler struct {
 }
 
 func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-
+	log.Info(fmt.Sprintf("%v", request))
 	var module string
 	var method string
 	var param []byte
+	var session string
 
+	path := request.URL.Path
+	moduleInfos := strings.Split(path, "/")
+	if len(moduleInfos) > 2 {
+		module = moduleInfos[1]
+		method = moduleInfos[2]
+	} else {
+		writer.WriteHeader(500)
+		writer.Write([]byte("url format error"))
+		return
+	}
+	session = request.Header.Get("Session")
+	if session == "" {
+		session = uuid.SafeString(32)
+		writer.Header().Set("Session", session)
+	}
 
-
-
-	log.Info(request.Method)
-	log.Info(request.URL.Path)
-	log.Info(request.Header.Get("Session"))
-	log.Info(fmt.Sprintf("%v", request))
-	log.Info(fmt.Sprintf("%v", request.Form))
-	log.Info(fmt.Sprintf("%v", request.URL.RawQuery))
-	log.Info(fmt.Sprintf("%v", request.PostForm))
 	if request.ContentLength > 0 {
 		defer request.Body.Close()
 		body, err := ioutil.ReadAll(request.Body)
+		param = body
 		if err != nil {
 			log.Error(err.Error())
 		}
 		log.Info(string(body))
+	}
+
+	callSession, error := handler.httpGate.app.GetRouteServers(module, "")
+	if error == nil && callSession != nil {
+		result, errCode := callSession.CallArgs(method, session, param)
+		if errCode.ErrorCode == 0 {
+			writer.Write(result)
+			writer.WriteHeader(200)
+		} else {
+			writer.Write([]byte(errCode.Error()))
+			writer.WriteHeader(int(errCode.ErrorCode))
+		}
+	} else {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Module Not Found"))
 	}
 
 }
