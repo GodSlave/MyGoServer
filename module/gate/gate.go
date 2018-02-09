@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/GodSlave/MyGoServer/utils/aes"
 	"github.com/garyburd/redigo/redis"
-	"github.com/go-xorm/xorm"
 	"github.com/GodSlave/MyGoServer/utils"
 )
 
@@ -23,7 +22,6 @@ type Gate struct {
 	basemodule.BaseModule
 	svr             *service.Server
 	redisPool       *redis.Pool
-	sqlEngine       *xorm.Engine
 	connCallBack    module.ConnectEventCallBack
 	disConnCallback module.ConnectEventCallBack
 }
@@ -152,6 +150,7 @@ func (m *Gate) progressJsonMessage(msg *message.PublishMessage, sess *sessions.S
 			log.Error("msg param format error %s", err.Error())
 			toResult(topic, nil, base.ErrParamParseFail, packetId)
 		}
+
 		serverSession, err := m.App.GetRouteServers(msgContent.Module, "")
 		if err != nil {
 			log.Error("Service(type:%s) not found", msgContent.Module)

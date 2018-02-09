@@ -3,7 +3,7 @@
   "OnlineLimit": 8000,
   "Name": "master",
   "Master": {
-    //是否是master模块
+    //是否启动Master功能
     "ISRealMaster": true,
     //记录统计信息
     "DBConfig": {
@@ -15,15 +15,15 @@
     },
     "RedisUrl": "redis://192.168.0.74:6379/2",
     "RedisPubSubConf": {
-      "Uri": "redis://192.168.0.74:6379/2",
       "Queue": "APPTrans"
     },
-    //管理模块的类型,与Module列表中ModuleType对应,开发者可以改为一个随机名称,以防止被非法访问
-    "MasterType": "Master"
+    //是否启用集群功能
+    "Enable": false
   },
   "Module": {
     "Gate": [
       {
+      "Uri": "redis://192.168.0.74:6379/2",
         //Id在整个Module中必须唯一,不能重复
         "Id": "Gate001",
         //不同模块分别分配一个byteID 但是该模块多个实例必须用该id标识
@@ -42,7 +42,17 @@
         "ProcessID": "development",
         "Redis": {
           "Uri": "redis://192.168.0.74:6379/1",
-          "Queue": "work3-User001"
+          "Queue": "gate-User001"
+        }
+      }
+    ],
+    "HttpGate": [
+      {
+        "Id": "HttpGate001",
+        "ByteId": 4,
+        "ProcessID": "development",
+        "Settings": {
+          "listenUrl": "0.0.0.0:8888"
         }
       }
     ]
