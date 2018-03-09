@@ -1,0 +1,15 @@
+syntax = "proto3";
+package Dolphin.Protocol;
+option go_package = "../module/smsAli";
+
+
+message SendSms_Request {
+    string verifyCode = 1;
+    string phoneNumber = 2;
+    string userId = 3;
+}
+
+message SendSms_Response {
+
+
+}

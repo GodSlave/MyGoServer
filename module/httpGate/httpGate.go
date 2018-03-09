@@ -64,7 +64,6 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 		writer.WriteHeader(500)
 		writer.Write([]byte("Module Not Found"))
 	}
-
 }
 
 type HttpGate struct {
@@ -98,7 +97,6 @@ func (this *HttpGate) Version() string {
 
 func (this *HttpGate) Run(closeSig chan bool) {
 	http.ListenAndServe(this.listenUrl, this.httpHandler)
-
 }
 
 func (this *HttpGate) OnDestroy() {

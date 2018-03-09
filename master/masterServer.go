@@ -64,8 +64,9 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 	master.rpcServer, _ = defaultrpc.NewRedisServer(masterConf.RedisPubSubConf, master.call_chan)
 
 	go master.checkReceiverMessage()
-	go master.tickServerStatus()
-
+	if masterConf.DBConfig.Enable {
+		go master.tickServerStatus()
+	}
 	return master
 }
 
@@ -148,7 +149,7 @@ func (m *DefaultMasterServer) publicMessage(funcName string, from string, obj in
 			log.Error(err.Error())
 		}
 	}
-//	log.Info("published %s ", string(arg))
+	//	log.Info("published %s ", string(arg))
 	callInfo := m.buildDefaultCallInfo(funcName, from, arg)
 	client.Call(*callInfo, nil)
 }

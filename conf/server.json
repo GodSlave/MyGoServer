@@ -7,6 +7,7 @@
     "ISRealMaster": true,
     //记录统计信息
     "DBConfig": {
+      "Enable": false,
       "DBName": "stastic",
       "UserName": "develop",
       "Password": "Woaini123!",
@@ -23,7 +24,7 @@
   "Module": {
     "Gate": [
       {
-      "Uri": "redis://192.168.0.74:6379/2",
+        "Uri": "redis://192.168.0.74:6379/2",
         //Id在整个Module中必须唯一,不能重复
         "Id": "Gate001",
         //不同模块分别分配一个byteID 但是该模块多个实例必须用该id标识

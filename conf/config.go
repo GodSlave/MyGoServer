@@ -125,6 +125,7 @@ type InfluxDBConfig struct {
 	Password  string
 	Addr      string
 	Precision string
+	Enable    bool
 }
 
 func readFileInto(path string) error {

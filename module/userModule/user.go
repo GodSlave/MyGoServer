@@ -191,7 +191,7 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Re
 		log.Error("operate redis error")
 		return nil, base.ErrInternal
 	}
-	return nil, base.ErrNil
+	return &User_GetVerifyCode_Response{}, base.ErrNil
 }
 
 func (m *ModuleUser) GetSelfInfo(user *base.BaseUser) (result *User_GetSelfInfo_Response, err *base.ErrorCode) {
