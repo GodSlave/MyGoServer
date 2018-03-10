@@ -10,11 +10,14 @@ import (
 	"io/ioutil"
 	"strings"
 	"github.com/GodSlave/MyGoServer/utils/uuid"
+	"encoding/json"
 )
 
 type HttpHandler struct {
 	http.Handler
-	httpGate *HttpGate
+	httpGate             *HttpGate
+	errSerializationFail []byte
+	errModuleNotFound    []byte
 }
 
 func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -36,8 +39,13 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	}
 	session = request.Header.Get("Session")
 	if session == "" {
+		session = request.Header.Get("cookie")
+	}
+
+	if session == "" {
 		session = uuid.SafeString(32)
 		writer.Header().Set("Session", session)
+		writer.Header().Set("cookie", session)
 	}
 
 	if request.ContentLength > 0 {
@@ -53,16 +61,23 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	callSession, error := handler.httpGate.app.GetRouteServers(module, "")
 	if error == nil && callSession != nil {
 		result, errCode := callSession.CallArgs(method, session, param)
-		if errCode.ErrorCode == 0 {
+		response := &Response{
+			status: errCode.ErrorCode,
+			data:   result,
+			msg:    errCode.Error(),
+		}
+		result, err := json.Marshal(response)
+		if err == nil {
 			writer.Write(result)
 			writer.WriteHeader(200)
 		} else {
-			writer.Write([]byte(errCode.Error()))
-			writer.WriteHeader(int(errCode.ErrorCode))
+			writer.Write(handler.errSerializationFail)
+			writer.WriteHeader(500)
 		}
+
 	} else {
 		writer.WriteHeader(500)
-		writer.Write([]byte("Module Not Found"))
+		writer.Write(handler.errModuleNotFound)
 	}
 }
 
@@ -71,6 +86,12 @@ type HttpGate struct {
 	app         module.App
 	listenUrl   string
 	httpHandler *HttpHandler
+}
+
+type Response struct {
+	status int32
+	msg    string
+	data   interface{}
 }
 
 var Module = func() module.Module {
@@ -85,6 +106,16 @@ func (this *HttpGate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	this.httpHandler = &HttpHandler{
 		httpGate: this,
 	}
+
+	errResponse := &Response{
+		status: 500,
+		msg:    "serialization fail",
+	}
+
+	this.httpHandler.errSerializationFail, _ = json.Marshal(errResponse)
+	errResponse.msg = "Module Not Found"
+	this.httpHandler.errModuleNotFound, _ = json.Marshal(errResponse)
+
 }
 
 func (this *HttpGate) GetType() string {
