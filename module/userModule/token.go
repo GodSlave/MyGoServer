@@ -38,9 +38,23 @@ func CreateToken(SessionId string, UserID string, conn redis.Conn) (token string
 func CheckVerifyCode(phone string, VerifyCode string, c redis.Conn) bool {
 	reply1, _ := redis.String(c.Do("GET", verifyCodeKey+phone))
 	// aabbcc for test
-	if ( reply1 != VerifyCode ) && VerifyCode != "aabbcc" && VerifyCode != conf.Conf.PrivateKey {
+	if ( reply1 != VerifyCode ) && VerifyCode != "9966" && VerifyCode != conf.Conf.PrivateKey {
 		return false
 	}
 	c.Do("DEL", verifyCodeKey+phone)
 	return true
+}
+
+func RefreshToken(rToken string, session string, conn redis.Conn) (tokenNew string, rTokenNew string) {
+
+	uid, err1 := redis.String(conn.Do("GET", base.REFRESH_TOKEN_PERFIX+rToken))
+	if err1 == nil && uid != "" {
+		conn.Do("DEL", base.REFRESH_TOKEN_PERFIX+rToken) //delete refresh token
+		oldToken, err1 := redis.String(conn.Do("GET", base.ID_TOKEN_PERFIX+uid))
+		if err1 == nil {
+			conn.Do("DEL",base.TOKEN_PERFIX+oldToken); // delete old token
+		}
+		return CreateToken(session, uid, conn)
+	}
+	return "", ""
 }

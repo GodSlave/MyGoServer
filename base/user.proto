@@ -23,6 +23,7 @@ message User_Login_Request {
 
 message User_Login_Response {
     UserTokenData user_token_data = 1;
+
 }
 
 
@@ -35,6 +36,7 @@ message User_Register_Request {
 
 message User_Register_Response {
     string result = 1;
+    UserTokenData tokenInfo = 2;
 }
 
 message User_GetVerifyCode_Request {
@@ -66,4 +68,24 @@ message User_RefreshToken_Request {
 
 message User_RefreshToken_Response {
     UserTokenData tokenData = 1;
+}
+
+
+message User_ForgetPassWord_Request {
+    string phoneNumber = 1;
+}
+
+message User_ForgetPassWord_Response {
+
+}
+
+message User_ChangePassWord_Request {
+    string phoneNumber = 1;
+    string verifyCode = 2;
+    string password = 3;
+}
+
+
+message User_ChangePassWord_Response {
+    bool isSuccess = 1;
 }

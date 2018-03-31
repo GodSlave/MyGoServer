@@ -38,4 +38,5 @@ var (
 	ErrRequestTimeout    = NewError(0xf3, "Request Timeout")
 	ErrInvalidToken      = NewError(0xf2, "Invalid Token")
 	ErrRequestToken      = NewError(0xef, "Token Required")
+	ErrSQLERROR           = NewError(0xee, "SQL ERROR")
 )

@@ -20,6 +20,12 @@ type HttpHandler struct {
 	errModuleNotFound    []byte
 }
 
+type Response struct {
+	Status int32       `json:"status"`
+	Msg    string      `json:"msg"`
+	Data   interface{} `json:"data"`
+}
+
 func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	log.Info(fmt.Sprintf("%v", request))
 	var module string
@@ -62,19 +68,18 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	if error == nil && callSession != nil {
 		result, errCode := callSession.CallArgs(method, session, param)
 		response := &Response{
-			status: errCode.ErrorCode,
-			data:   result,
-			msg:    errCode.Error(),
+			Status: errCode.ErrorCode,
+			Data:   (string(result)),
+			Msg:    errCode.Desc,
 		}
-		result, err := json.Marshal(response)
+		result1, err := json.Marshal(response)
 		if err == nil {
-			writer.Write(result)
 			writer.WriteHeader(200)
+			writer.Write(result1)
 		} else {
-			writer.Write(handler.errSerializationFail)
 			writer.WriteHeader(500)
+			writer.Write(handler.errSerializationFail)
 		}
-
 	} else {
 		writer.WriteHeader(500)
 		writer.Write(handler.errModuleNotFound)
@@ -86,12 +91,6 @@ type HttpGate struct {
 	app         module.App
 	listenUrl   string
 	httpHandler *HttpHandler
-}
-
-type Response struct {
-	status int32
-	msg    string
-	data   interface{}
 }
 
 var Module = func() module.Module {
@@ -108,12 +107,12 @@ func (this *HttpGate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	}
 
 	errResponse := &Response{
-		status: 500,
-		msg:    "serialization fail",
+		Status: 500,
+		Msg:    "serialization fail",
 	}
 
 	this.httpHandler.errSerializationFail, _ = json.Marshal(errResponse)
-	errResponse.msg = "Module Not Found"
+	errResponse.Msg = "Module Not Found"
 	this.httpHandler.errModuleNotFound, _ = json.Marshal(errResponse)
 
 }

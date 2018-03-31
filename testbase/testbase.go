@@ -29,7 +29,7 @@ func InitClient() *service.Client {
 	msg.SetKeepAlive(10)
 
 	// Connects to the remote server at 127.0.0.1 port 1883
-	err := c.Connect("tcp://127.0.0.1:1883", msg)
+	err := c.Connect("tcp://47.97.221.103:1883", msg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil

@@ -24,6 +24,7 @@ type ModuleUser struct {
 
 var verifyCodeKey = "VerifyCode"
 var verifyCodeTimeKey = "VerifyCodeTime"
+var forgotPasswordVerifyCodeKey = "forgotPasswordVerifyCodeKey"
 
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
@@ -39,6 +40,7 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("GetVerifyCode", 3, m.GetVerifyCode)
 	m.GetServer().RegisterGO("GetSelfInfo", 4, m.GetSelfInfo)
 	m.GetServer().RegisterGO("Logout", 5, m.LogOut)
+	m.GetServer().RegisterGO("RefreshToken", 6, m.RefreshToken)
 	m.app = app
 
 	var user = &base.BaseUser{}
@@ -163,13 +165,22 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 		return nil, base.ErrInternal
 	}
 	m.app.GetUserManager().OnUserRegister(user)
+	conn := m.redisPool.Get()
+	defer conn.Close()
+	m.removeLoginUser(user, conn, SessionId)
+	token, rToken := CreateToken(SessionId, user.UserID, conn)
 	return &User_Register_Response{
 		Result: user.UserID,
+		TokenInfo: &UserTokenData{
+			Token:        token,
+			RefreshToken: rToken,
+			ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+		},
 	}, base.ErrNil
 }
 
 func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Request) (result *User_GetVerifyCode_Response, err *base.ErrorCode) {
-	randString := uuid.RandNumbers(6)
+	randString := uuid.RandNumbers(4)
 	conn := m.redisPool.Get()
 	defer conn.Close()
 	var err1 error
@@ -184,7 +195,6 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Re
 	_, err1 = conn.Do("DEL", verifyCodeKey+form.PhoneNumber)
 	_, err1 = conn.Do("SET", verifyCodeKey+form.PhoneNumber, randString)
 	_, err1 = conn.Do("EXPIRE", verifyCodeKey+form.PhoneNumber, 900)
-	_, err1 = conn.Do("SET", verifyCodeTimeKey+form.PhoneNumber, time.Now().Unix())
 	//TODO  real send verify code
 
 	if err1 != nil {
@@ -220,21 +230,81 @@ func (m *ModuleUser) LogOut(user *base.BaseUser) (result *User_Login_Response, e
 
 func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Request) (result *User_RefreshToken_Response, err *base.ErrorCode) {
 	conn, err1 := m.redisPool.Dial()
+	defer conn.Close()
 	if conn != nil && err1 == nil {
-		userid, err1 := redis.String(conn.Do("GET", base.REFRESH_TOKEN_PERFIX+form.RefreshToken))
-		if err1 == nil {
-			conn := m.redisPool.Get()
-			defer conn.Close()
-			token, rToken := CreateToken(sessionId, userid, conn)
-			refreshResponse := &User_RefreshToken_Response{
-				TokenData: &UserTokenData{
-					Token:        token,
-					RefreshToken: rToken,
-					ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
-				},
-			}
-			return refreshResponse, base.ErrNil
+		token, rToken := RefreshToken(sessionId, form.RefreshToken, conn)
+		refreshResponse := &User_RefreshToken_Response{
+			TokenData: &UserTokenData{
+				Token:        token,
+				RefreshToken: rToken,
+				ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+			},
+		}
+		return refreshResponse, base.ErrNil
+	}
+	return nil, base.ErrInternal
+}
+
+func (m *ModuleUser) ForgetPassword(sessionId string, form *User_ForgetPassWord_Request) (result *User_ForgetPassWord_Response, err *base.ErrorCode) {
+
+	randString := uuid.RandNumbers(6)
+	conn := m.redisPool.Get()
+	defer conn.Close()
+	var err1 error
+	if len(form.PhoneNumber) < 11 {
+		return nil, base.ErrParamNotAllow
+	}
+	lastRequestTime, err1 := redis.Int64(conn.Do("GET", verifyCodeTimeKey+form.PhoneNumber))
+	if time.Now().Unix()-lastRequestTime < 60 {
+		return nil, base.ErrVerifySendTooBusy
+	}
+
+	_, err1 = conn.Do("DEL", forgotPasswordVerifyCodeKey+form.PhoneNumber)
+	_, err1 = conn.Do("SET", forgotPasswordVerifyCodeKey+form.PhoneNumber, randString)
+	_, err1 = conn.Do("EXPIRE", forgotPasswordVerifyCodeKey+form.PhoneNumber, 900)
+	//TODO  real send verify code
+
+	if err1 != nil {
+		log.Error("operate redis error")
+		return nil, base.ErrInternal
+	}
+	return &User_ForgetPassWord_Response{}, base.ErrNil
+
+}
+
+func (m *ModuleUser) ChangePassword(sessionId string, form *User_ChangePassWord_Request) (result *User_ChangePassWord_Response, err *base.ErrorCode) {
+	conn := m.redisPool.Get()
+	defer conn.Close()
+	reply1, _ := redis.String(conn.Do("GET", verifyCodeKey+form.PhoneNumber))
+	// aabbcc for test
+	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "9966" && form.VerifyCode != conf.Conf.PrivateKey {
+		return nil, &base.ErrorCode{
+			1,
+			"验证码错误",
 		}
 	}
-	return
+
+	user := &base.BaseUser{
+		Name: form.PhoneNumber,
+	}
+
+	exist, err1 := m.sqlEngine.Get(user)
+	if !exist || err1 != nil {
+		return nil, &base.ErrorCode{
+			2,
+			"未找到该用户",
+		}
+	}
+
+	md5sum := md5.Sum([]byte(form.Password + m.app.GetSettings().PrivateKey))
+	password := hex.EncodeToString(md5sum[:])
+	user.Password = password
+	_, err2 := m.sqlEngine.Update(user)
+	if err2 != nil {
+		return nil, base.ErrInternal
+	}
+
+	return &User_ChangePassWord_Response{
+		true,
+	}, base.ErrNil
 }
