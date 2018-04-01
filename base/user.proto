@@ -26,7 +26,6 @@ message User_Login_Response {
 
 }
 
-
 message User_Register_Request {
     string username = 1;
     string password = 2;
@@ -79,13 +78,33 @@ message User_ForgetPassWord_Response {
 
 }
 
-message User_ChangePassWord_Request {
+message User_ChangePassWordByVerifyCode_Request {
     string phoneNumber = 1;
     string verifyCode = 2;
     string password = 3;
 }
 
 
-message User_ChangePassWord_Response {
+message User_ChangePassWordByVerifyCode_Response {
     bool isSuccess = 1;
+}
+
+message User_ChangePassWordByPassword_Request {
+    string oldPassword = 1;
+    string newPassword = 2;
+}
+
+
+message User_ChangePassWordByPassword_Response {
+    bool isSuccess = 1;
+}
+
+
+message User_CheckVerifyCodeAvailable_Request {
+    string phoneNumber = 1;
+    string verifyCode = 2;
+}
+message User_CheckVerifyCodeAvailable_Response {
+    bool isAvalible = 1;
+    bool isAccountTaken = 2;
 }

@@ -41,6 +41,11 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("GetSelfInfo", 4, m.GetSelfInfo)
 	m.GetServer().RegisterGO("Logout", 5, m.LogOut)
 	m.GetServer().RegisterGO("RefreshToken", 6, m.RefreshToken)
+	m.GetServer().RegisterGO("ChangePasswordByVerifyCode", 7, m.ChangePasswordByVerifyCode)
+	m.GetServer().RegisterGO("ChangePasswordByPassword", 8, m.ChangePasswordByPassword)
+	m.GetServer().RegisterGO("CheckVerifyCodeAvailable", 9, m.checkVerifyCodeAvailable)
+	m.GetServer().RegisterGO("SendForgotPasswordVrifyCode", 10, m.ForgetPassword)
+
 	m.app = app
 
 	var user = &base.BaseUser{}
@@ -232,7 +237,12 @@ func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Requ
 	conn, err1 := m.redisPool.Dial()
 	defer conn.Close()
 	if conn != nil && err1 == nil {
-		token, rToken := RefreshToken(sessionId, form.RefreshToken, conn)
+		token, rToken := RefreshToken(form.RefreshToken, sessionId, conn)
+		if token == "" {
+			return nil, &base.ErrorCode{
+				ErrorCode: 1, Desc: "刷新token失败",
+			}
+		}
 		refreshResponse := &User_RefreshToken_Response{
 			TokenData: &UserTokenData{
 				Token:        token,
@@ -272,12 +282,12 @@ func (m *ModuleUser) ForgetPassword(sessionId string, form *User_ForgetPassWord_
 
 }
 
-func (m *ModuleUser) ChangePassword(sessionId string, form *User_ChangePassWord_Request) (result *User_ChangePassWord_Response, err *base.ErrorCode) {
+func (m *ModuleUser) ChangePasswordByVerifyCode(sessionId string, form *User_ChangePassWordByVerifyCode_Request) (result *User_ChangePassWordByVerifyCode_Response, err *base.ErrorCode) {
 	conn := m.redisPool.Get()
 	defer conn.Close()
-	reply1, _ := redis.String(conn.Do("GET", verifyCodeKey+form.PhoneNumber))
+	reply1, _ := redis.String(conn.Do("GET", forgotPasswordVerifyCodeKey+form.PhoneNumber))
 	// aabbcc for test
-	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "9966" && form.VerifyCode != conf.Conf.PrivateKey {
+	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "999666" && form.VerifyCode != conf.Conf.PrivateKey {
 		return nil, &base.ErrorCode{
 			1,
 			"验证码错误",
@@ -304,7 +314,63 @@ func (m *ModuleUser) ChangePassword(sessionId string, form *User_ChangePassWord_
 		return nil, base.ErrInternal
 	}
 
-	return &User_ChangePassWord_Response{
+	return &User_ChangePassWordByVerifyCode_Response{
 		true,
 	}, base.ErrNil
+}
+
+func (m *ModuleUser) ChangePasswordByPassword(user *base.BaseUser, form *User_ChangePassWordByPassword_Request) (result *User_ChangePassWordByPassword_Response, err *base.ErrorCode) {
+	md5sum := md5.Sum([]byte(form.OldPassword + m.app.GetSettings().PrivateKey))
+	oldpassword := hex.EncodeToString(md5sum[:])
+	if oldpassword != user.Password {
+		return nil, &base.ErrorCode{
+			ErrorCode: 1, Desc: "旧密码错误",
+		}
+	}
+
+	if len(form.NewPassword) >= 6 && len(form.NewPassword) <= 24 {
+		newMd5sum := md5.Sum([]byte(form.OldPassword + m.app.GetSettings().PrivateKey))
+		newPassword := hex.EncodeToString(newMd5sum[:])
+		user.Password = newPassword
+		_, error := m.sqlEngine.Update(user)
+		if error != nil {
+			return nil, base.ErrSQLERROR
+		}
+	} else {
+		return nil, &base.ErrorCode{
+			ErrorCode: 2, Desc: "新密码格式错误",
+		}
+	}
+
+	return &User_ChangePassWordByPassword_Response{
+		true,
+	}, base.ErrNil
+}
+
+func (m *ModuleUser) checkVerifyCodeAvailable(sessionId string, form *User_CheckVerifyCodeAvailable_Request) (*User_CheckVerifyCodeAvailable_Response, *base.ErrorCode) {
+
+	conn, err := m.redisPool.Dial()
+	if err == nil {
+		defer conn.Close()
+		baseuser := &base.BaseUser{
+			Phone: form.PhoneNumber,
+		}
+
+		exist, _ := m.sqlEngine.Get(baseuser)
+		verifyCode, err := redis.String(conn.Do("get", forgotPasswordVerifyCodeKey+form.PhoneNumber))
+		if err == nil && verifyCode == form.VerifyCode {
+			return &User_CheckVerifyCodeAvailable_Response{true, exist}, base.ErrNil
+		}
+		verifyCode, err = redis.String(conn.Do("get", verifyCodeKey+form.PhoneNumber))
+		if err == nil && verifyCode == form.VerifyCode {
+			return &User_CheckVerifyCodeAvailable_Response{true, exist}, base.ErrNil
+		}
+		return nil, &base.ErrorCode{
+			ErrorCode: 1,
+			Desc:      "验证码校验错误",
+		}
+	}
+
+	return nil, base.ErrSQLERROR
+
 }
