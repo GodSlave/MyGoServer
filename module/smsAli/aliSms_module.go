@@ -1,13 +1,15 @@
 package smsAli
 
 import (
-	"github.com/GodSlave/MyGoServer/module"
+	"github.com/GodSlave/MyGoServer/module/base"
 	"github.com/GodSlave/MyGoServer/conf"
 	"github.com/gwpp/alidayu-go"
-	"github.com/gwpp/alidayu-go/request"
 	"fmt"
-	"github.com/GodSlave/MyGoServer/log"
 	"github.com/GodSlave/MyGoServer/base"
+	"github.com/GodSlave/MyGoServer/module"
+	"github.com/GiterLab/aliyun-sms-go-sdk/dysms"
+	"github.com/GodSlave/MyGoServer/utils/uuid"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 var Module = func() module.Module {
@@ -16,7 +18,7 @@ var Module = func() module.Module {
 }
 
 type SmsAli struct {
-	module.Module
+	basemodule.BaseModule
 	app             module.App
 	aKey            string
 	secreteAKey     string
@@ -31,24 +33,27 @@ func (m *SmsAli) GetType() string {
 }
 
 func (this *SmsAli) OnInit(app module.App, settings *conf.ModuleSettings) {
+	this.BaseModule.OnInit(this, app, settings)
 	this.app = app
 	this.aKey = settings.Settings["aKey"].(string)
 	this.secreteAKey = settings.Settings["secreteAKey"].(string)
-
+	this.smsTemplateName = settings.Settings["smsTemplateName"].(string)
+	this.smsSignName = settings.Settings["smsSignName"].(string)
 	this.smsClient = alidayu.NewTopClient(this.aKey, this.secreteAKey)
+	this.GetServer().RegisterGO("sendSmsCode", 1, this.sendSmsCode)
 }
 
 func (this *SmsAli) sendSmsCode(form *SendSms_Request) (*SendSms_Response, *base.ErrorCode) {
-	req := request.NewAlibabaAliqinFcSmsNumSendRequest()
-	req.SmsFreeSignName = this.smsSignName
-	req.RecNum = form.PhoneNumber
-	req.SmsTemplateCode = this.smsTemplateName
-	req.SmsParam = fmt.Sprintf(`{"code":%s}`, form.VerifyCode)
-	response, err := this.smsClient.Execute(req)
+	dysms.HTTPDebugEnable = true
+	dysms.SetACLClient(this.aKey, this.secreteAKey) // dysms.New(ACCESSID, ACCESSKEY)
+
+	// send to one person
+	respSendSms, err := dysms.SendSms(uuid.SafeString(16), form.PhoneNumber, this.smsSignName, this.smsTemplateName, fmt.Sprintf(`{"code":%s}`, form.VerifyCode)).DoActionWithException()
 	if err != nil {
-		log.Error(err.Error())
+		log.Info("send sms failed  %v %v", err, respSendSms.Error())
+		return nil, base.ErrSMSSendFail
 	}
-	log.Info(fmt.Sprintf("v%", response))
+	log.Info("send sms succeed %v", respSendSms.GetRequestID())
 	return nil, base.ErrNil
 }
 

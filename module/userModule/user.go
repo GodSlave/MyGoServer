@@ -13,6 +13,7 @@ import (
 	"time"
 	"github.com/GodSlave/MyGoServer/utils/uuid"
 	"encoding/json"
+	"github.com/GodSlave/MyGoServer/module/smsAli"
 )
 
 type ModuleUser struct {
@@ -89,11 +90,9 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 			}
 
 			loginReq := &User_Login_Response{
-				UserTokenData: &UserTokenData{
-					Token:        token,
-					RefreshToken: rToken,
-					ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
-				},
+				Token:        token,
+				RefreshToken: rToken,
+				ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
 			}
 			m.GetApp().GetUserManager().OnUserLogin(user)
 			return loginReq, base.ErrNil
@@ -200,7 +199,27 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Re
 	_, err1 = conn.Do("DEL", verifyCodeKey+form.PhoneNumber)
 	_, err1 = conn.Do("SET", verifyCodeKey+form.PhoneNumber, randString)
 	_, err1 = conn.Do("EXPIRE", verifyCodeKey+form.PhoneNumber, 900)
-	//TODO  real send verify code
+	serverSession, err1 := m.GetApp().GetRouteServers("SMS", "")
+	var errorCode *base.ErrorCode
+	if err1 == nil {
+		request := &smsAli.SendSms_Request{
+			VerifyCode:  randString,
+			PhoneNumber: form.PhoneNumber,
+			UserId:      SessionId,
+		}
+		requestContent, err2 := json.Marshal(request)
+		if err2 == nil {
+			_, errorCode = serverSession.CallArgs("sendSmsCode", SessionId, requestContent)
+		}
+	}
+	if errorCode == nil {
+		log.Error("sms module error")
+		return nil, base.ErrInternal
+	}
+
+	if errorCode.ErrorCode != 0 {
+		return nil, errorCode
+	}
 
 	if err1 != nil {
 		log.Error("operate redis error")

@@ -56,6 +56,19 @@
           "listenUrl": "0.0.0.0:8888"
         }
       }
+    ],
+    "SMS": [
+      {
+        "Id": "SMS001",
+        "ByteId": 5,
+        "ProcessID": "development",
+        "Settings": {
+          "aKey": "",
+          "secreteAKey": "",
+          "smsTemplateName": "",
+          "smsSignName":""
+        }
+      }
     ]
   },
   "Rpc": {
