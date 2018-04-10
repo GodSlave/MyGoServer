@@ -67,19 +67,10 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	callSession, error := handler.httpGate.app.GetRouteServers(module, "")
 	if error == nil && callSession != nil {
 		result, errCode := callSession.CallArgs(method, session, param)
-		response := &Response{
-			Status: errCode.ErrorCode,
-			Data:   (string(result)),
-			Msg:    errCode.Desc,
-		}
-		result1, err := json.Marshal(response)
-		if err == nil {
-			writer.WriteHeader(200)
-			writer.Write(result1)
-		} else {
-			writer.WriteHeader(500)
-			writer.Write(handler.errSerializationFail)
-		}
+		restlutformat := `{"status":%i,data:%s,msg:%s}`
+		result1 := fmt.Sprintf(restlutformat, errCode.ErrorCode, (string(result)), errCode.Desc)
+		writer.WriteHeader(200)
+		writer.Write([]byte(result1))
 	} else {
 		writer.WriteHeader(500)
 		writer.Write(handler.errModuleNotFound)
