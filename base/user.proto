@@ -22,8 +22,9 @@ message User_Login_Request {
 }
 
 message User_Login_Response {
-    UserTokenData user_token_data = 1;
-
+    string token = 1;
+    string refreshToken = 2;
+    int64 expireAt = 3;
 }
 
 message User_Register_Request {

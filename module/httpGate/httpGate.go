@@ -67,7 +67,7 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	callSession, error := handler.httpGate.app.GetRouteServers(module, "")
 	if error == nil && callSession != nil {
 		result, errCode := callSession.CallArgs(method, session, param)
-		restlutformat := `{"status":%i,data:%s,msg:%s}`
+		restlutformat := `{"status":%d,data:%s,msg:"%s"}`
 		result1 := fmt.Sprintf(restlutformat, errCode.ErrorCode, (string(result)), errCode.Desc)
 		writer.WriteHeader(200)
 		writer.Write([]byte(result1))
