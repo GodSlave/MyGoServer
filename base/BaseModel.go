@@ -22,5 +22,5 @@ type BaseUser struct {
 type PushItem struct {
 	Module   byte
 	PushType byte
-	Content	 *PushContent
+	Content	 *PushContentData
 }

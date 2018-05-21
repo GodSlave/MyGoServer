@@ -1,10 +1,10 @@
 package main
 
 import (
-	app2 "github.com/GodSlave/MyGoServer/app"
-	"github.com/GodSlave/MyGoServer/module/gate"
-	"github.com/GodSlave/MyGoServer/module/userModule"
-	"github.com/GodSlave/MyGoServer/module/httpGate"
+app2 "github.com/GodSlave/MyGoServer/app"
+"github.com/GodSlave/MyGoServer/module/gate"
+"github.com/GodSlave/MyGoServer/module/userModule"
+"github.com/GodSlave/MyGoServer/module/httpGate"
 )
 
 var (
