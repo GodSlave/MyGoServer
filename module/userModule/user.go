@@ -14,6 +14,7 @@ import (
 	"github.com/GodSlave/MyGoServer/utils/uuid"
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/module/smsAli"
+	"github.com/gogo/protobuf/proto"
 )
 
 type ModuleUser struct {
@@ -26,7 +27,7 @@ type ModuleUser struct {
 var verifyCodeKey = "VerifyCode"
 var verifyCodeTimeKey = "VerifyCodeTime"
 var forgotPasswordVerifyCodeKey = "forgotPasswordVerifyCodeKey"
-var ExpireTime = int32(7*24*3600)
+var ExpireTime = int32(7 * 24 * 3600)
 
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
@@ -112,9 +113,7 @@ func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, 
 			pushItem := base.PushItem{
 				Module:   0,
 				PushType: 0,
-				Content: &base.PushContentData{
-					Content: []byte("Other client Login"),
-				},
+				Content:  []byte("Other client Login"),
 			}
 			content, _ := json.Marshal(pushItem)
 			if session != "" {
@@ -122,6 +121,38 @@ func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, 
 				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
 			} else if token != "" {
 				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", token, content)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
+			}
+		}()
+	}
+
+	if err != nil {
+		log.Error(err.Error())
+	}
+	m.notifyUserLogin(user, redisConn, currentSession)
+}
+
+func (m *ModuleUser) notifyUserLogin(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
+	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
+	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
+	if token != "" || session != "" {
+		go func() {
+			//send offline reason
+			response := &User_OnLoginSuccessNotify_Response{
+				Msg: "Login Success Push",
+			}
+			content, _ := proto.Marshal(response)
+			pushItem := base.PushItem{
+				Module:   2,
+				PushType: 11,
+				Content:  content,
+			}
+			pushContent,_ := json.Marshal(pushItem)
+			if session != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", session, pushContent)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
+			} else if token != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", token, pushContent)
 				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
 			}
 		}()
@@ -179,7 +210,7 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 		TokenInfo: &UserTokenData{
 			Token:        token,
 			RefreshToken: rToken,
-			ExpireAt:     int32(time.Date(0,0,7,0,0,0,0,time.UTC).Second()),
+			ExpireAt:     int32(time.Date(0, 0, 7, 0, 0, 0, 0, time.UTC).Second()),
 		},
 	}, base.ErrNil
 }

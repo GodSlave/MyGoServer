@@ -1,0 +1,49 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "XA/Y442W+yy5caVwS8AlMKH+6Cs=",
+			"path": "github.com/go-sql-driver/mysql",
+			"revision": "cd4cb909ce1a31435164be29bf3682031f61539a",
+			"revisionTime": "2017-11-17T11:51:24Z"
+		},
+		{
+			"checksumSHA1": "z+ru/H80S+AN2glztGEGe3KKS/A=",
+			"path": "github.com/gogo/protobuf/proto",
+			"revision": "616a82ed12d78d24d4839363e8f3c5d3f20627cf",
+			"revisionTime": "2017-11-09T18:15:19Z"
+		},
+		{
+			"checksumSHA1": "cRxfZM32wP1Ry67s3jLRoYxAz/E=",
+			"path": "github.com/golang/protobuf/proto",
+			"revision": "1e59b77b52bf8e4b449a57e6f79f21226d571845",
+			"revisionTime": "2017-11-13T18:07:20Z"
+		},
+		{
+			"checksumSHA1": "sDR7tfjDPrQcPgMp4Tpo6y1JGKQ=",
+			"path": "github.com/influxdata/influxdb/client/v2",
+			"revision": "0f6e6fb9efc4c768c21bba8af77e51c316acbcb4",
+			"revisionTime": "2018-02-01T22:39:01Z"
+		},
+		{
+			"checksumSHA1": "fOJ0Dq5bMAWizM9gpVEgGpEOvUU=",
+			"path": "github.com/opentracing/opentracing-go",
+			"revision": "1361b9cd60be79c4c3a7fa9841b3c132e40066a7",
+			"revisionTime": "2017-10-03T13:35:19Z"
+		},
+		{
+			"checksumSHA1": "j/y1N0ZGvGTJ39XSQx0FmUCXdaA=",
+			"path": "github.com/streadway/amqp",
+			"revision": "ff791c2d22d3f1588b4e2cc71a9fba5e1da90654",
+			"revisionTime": "2017-11-01T22:23:33Z"
+		},
+		{
+			"checksumSHA1": "8t6OJ6pskm+sKgeQEmiZB0fnXLw=",
+			"path": "github.com/surgemq/message",
+			"revision": "2b7ca1ac6121420133f8df6b94a976d5ca35339a",
+			"revisionTime": "2015-10-17T23:33:15Z"
+		}
+	],
+	"rootPath": "github.com/GodSlave/MyGoServer"
+}

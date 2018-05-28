@@ -98,7 +98,7 @@ func SubI(client *service.Client, checkChan chan *gate.AllResponse) error {
 		err = json.Unmarshal(payload, pushContent)
 		if err == nil {
 			allRepon := &gate.AllResponse{
-				Result: pushContent.Content.Content,
+				Result: pushContent.Content,
 				State:  0,
 			}
 			checkChan <- allRepon

@@ -54,7 +54,7 @@ func (m *Gate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("PushMessageI", 1, m.PushMessage)
 	m.GetServer().RegisterGO("KickOut", 2, m.KickOut)
 	m.GetServer().RegisterGO("PushMessageF", 3, m.PushMessagef)
-	m.sessidMap =  map[string]string{}
+	m.sessidMap = map[string]string{}
 }
 
 func (m *Gate) Run(closeSig chan bool) {
@@ -67,7 +67,6 @@ func (m *Gate) Run(closeSig chan bool) {
 		TopicsProvider:   "mem",         // keeps topic subscriptions in memory
 		BusinessAgent:    m,
 		Services:         utils.NewBeeMap(),
-
 	}
 	// Listen and serve connections at localhost:1883
 	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
@@ -272,7 +271,6 @@ func (m *Gate) OnDisConnect(sess *sessions.Session) {
 		m.App.GetUserManager().OnUserDisconnect(sess.Id)
 	}
 	delete(m.sessidMap, m.App.GetUserManager().VerifyUserID(sess.Id))
-
 }
 
 func (m *Gate) OnConnect(sess *sessions.Session) {
@@ -300,7 +298,7 @@ func (m *Gate) SetOnDisConnectCallBack(callback module.ConnectEventCallBack) {
 func (m *Gate) PushMessage(userId string, item *base.PushItem) {
 	value, exits := m.sessidMap[userId]
 	key := userId
-	if exits{
+	if exits {
 		key = value
 	}
 
@@ -323,18 +321,28 @@ func (m *Gate) PushMessage(userId string, item *base.PushItem) {
 func (m *Gate) PushMessagef(userId string, item *base.PushItem) {
 	value, exits := m.sessidMap[userId]
 	key := userId
-	if exits{
+	if exits {
 		key = value
 	}
 	service := m.getService(key)
 	if service != nil {
-		topic := []byte{'q'}
-		protoContent, _ := proto.Marshal( interface{}(item.Content).(proto.Message))
-		realContent := make([]byte, len(protoContent)+2)
+		topic := []byte{'f'}
+		response := &AllResponse{
+			Msg:    "push",
+			Result: item.Content,
+			State:  0,
+		}
+		pushes, err := proto.Marshal(response)
+		if err != nil {
+			return
+		}
+
+		//protoContent, _ := proto.Marshal( interface{}(item.Content).(proto.Message))
+		realContent := make([]byte, len(pushes)+2)
 		realContent[0] = item.Module
 		realContent[1] = item.PushType
-		copy(realContent[2:], protoContent)
-		log.Info("%v",realContent)
+		copy(realContent[2:],pushes)
+		log.Info("%v", realContent)
 		m.WriteMsg(topic, realContent, 0, service.GetSession())
 	} else {
 		log.Error("user not found")

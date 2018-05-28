@@ -109,3 +109,7 @@ message User_CheckVerifyCodeAvailable_Response {
     bool isAvalible = 1;
     bool isAccountTaken = 2;
 }
+
+message User_OnLoginSuccessNotify_Response{
+    string msg =1;
+}
