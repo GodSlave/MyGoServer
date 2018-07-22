@@ -39,6 +39,8 @@ type App interface {
 	Route(moduleType string, fn func(app App, Type string, hash string) ServerSession) error
 	Configure(settings conf.Config) error
 	OnInit(settings conf.Config) error
+	GetConfig() conf.Config
+
 	OnDestroy() error
 	RegisterLocalClient(serverId string, server mqrpc.RPCServer) error
 	GetServersById(id string) (ServerSession, error)
@@ -72,7 +74,6 @@ type App interface {
 	GetUserManager() UserManager
 
 	SetInitDownCallBack(callBack OnInitDownCallBack)
-
 }
 type ConnectEventCallBack func(sessionID string)
 
@@ -81,7 +82,7 @@ type Gate interface {
 	SetOnDisConnectCallBack(callback ConnectEventCallBack)
 }
 
-type UserEventCallBack func(user *base.BaseUser,app App)
+type UserEventCallBack func(user *base.BaseUser, app App)
 
 type UserManager interface {
 	OnUserLogOut(user *base.BaseUser) //用于处理用户逻辑

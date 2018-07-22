@@ -15,7 +15,6 @@ import (
 	"strings"
 	"github.com/GodSlave/MyGoServer/db"
 	"github.com/go-xorm/xorm"
-	"github.com/GodSlave/MyGoServer/base"
 	"github.com/garyburd/redigo/redis"
 	"github.com/GodSlave/MyGoServer/utils"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"os/signal"
 	"math"
 	"hash/crc32"
+	"github.com/GodSlave/MyGoServer/base"
 )
 
 type DefaultApp struct {
@@ -71,7 +71,7 @@ func NewApp() module.App {
 	}
 
 	newApp.byteDefaultRoutes = func(app module.App, Type byte, hash string) module.ServerSession {
-		log.Error("new call  ")
+
 		if newApp.masterClient != nil {
 			return *newApp.masterClient.GetModuleByByte(Type)
 		} else {
@@ -368,4 +368,7 @@ func (app *DefaultApp) SetInitDownCallBack(callBack module.OnInitDownCallBack) {
 
 func (app *DefaultApp) GetModuleManager() *basemodule.ModuleManager {
 	return app.moduleManger
+}
+func (app *DefaultApp) GetConfig() conf.Config{
+	return  app.settings
 }

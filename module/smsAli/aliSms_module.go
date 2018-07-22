@@ -43,7 +43,7 @@ func (this *SmsAli) OnInit(app module.App, settings *conf.ModuleSettings) {
 	this.GetServer().RegisterGO("sendSmsCode", 1, this.sendSmsCode)
 }
 
-func (this *SmsAli) sendSmsCode(form *SendSms_Request) (*SendSms_Response, *base.ErrorCode) {
+func (this *SmsAli) sendSmsCode(form *SMS_SendSms_Request) (*SMS_SendSms_Request, *base.ErrorCode) {
 	dysms.HTTPDebugEnable = true
 	dysms.SetACLClient(this.aKey, this.secreteAKey) // dysms.New(ACCESSID, ACCESSKEY)
 

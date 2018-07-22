@@ -1,6 +1,8 @@
 syntax = "proto3";
-package base;
-message PushContent {
+package Dolphin.Protocol;
+option go_package = "base";
+message PushContentData {
     //推送内容
     bytes content = 1;
 }
+

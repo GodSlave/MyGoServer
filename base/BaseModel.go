@@ -1,6 +1,5 @@
 package base
 
-
 var SESSION_PERFIX = "session"
 var ID_SESSION_PREFIX = "USession"
 var TOKEN_PERFIX = "token"
@@ -22,5 +21,5 @@ type BaseUser struct {
 type PushItem struct {
 	Module   byte
 	PushType byte
-	Content	 *PushContent
+	Content  []byte
 }

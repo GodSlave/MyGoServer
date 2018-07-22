@@ -11,7 +11,6 @@ import (
 	"github.com/GodSlave/MyGoServer/base"
 	"time"
 	"github.com/GodSlave/MyGoServer/testbase"
-	"strconv"
 	"sync"
 	"github.com/GodSlave/MyGoServer/log"
 )
@@ -50,8 +49,10 @@ func TestJson(t *testing.T) {
 			testbase.SubI(c, checkChan)
 			time.Sleep(1 * time.Second)
 			user := &base.BaseUser{
-				Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
-				Password: "woaini1232" + strconv.Itoa(index),
+				//Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
+				//Password: "woaini1232" + strconv.Itoa(index),
+				Name:     "zhanglin",
+				Password: "woaini1232",
 			}
 			err := RegisterI(c, user, checkChan)
 			if err != nil {
@@ -70,13 +71,14 @@ func RegisterI(client *service.Client, user1 *base.BaseUser, callback chan *gate
 	login := &userModule.User_Register_Request{
 		Username:   user1.Name,
 		Password:   user1.Password,
-		VerifyCode: "aabbcc",
+		VerifyCode: "9966",
 	}
 	err = client.Publish(testbase.BuildIPublishMessage(client, login, "User", "Register"), nil)
 	log.Info("wait response ")
 	var allrespon *gate.AllResponse
 	allrespon = <-callback
 	fmt.Println("register Response", allrespon.State)
+	fmt.Printf("%v", allrespon)
 	return err
 }
 

@@ -52,7 +52,8 @@ func RefreshToken(rToken string, session string, conn redis.Conn) (tokenNew stri
 		conn.Do("DEL", base.REFRESH_TOKEN_PERFIX+rToken) //delete refresh token
 		oldToken, err1 := redis.String(conn.Do("GET", base.ID_TOKEN_PERFIX+uid))
 		if err1 == nil {
-			conn.Do("DEL",base.TOKEN_PERFIX+oldToken); // delete old token
+			conn.Do("EXPIRE",base.TOKEN_PERFIX+oldToken,3600*12) // delete old token
+			conn.Do("DEL",base.ID_TOKEN_PERFIX+uid)
 		}
 		return CreateToken(session, uid, conn)
 	}

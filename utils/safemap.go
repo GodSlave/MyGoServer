@@ -100,6 +100,18 @@ func (m *BeeMap) Items() map[interface{}]interface{} {
 	return r
 }
 
-func (m *BeeMap) Size() int{
-	return  len(m.bm)
+func (m *BeeMap) Keys() *[]interface{} {
+	m.lock.RLock()
+	keys := make([]interface{}, len(m.bm))
+	for k := range m.bm {
+		i := 0
+		keys[i] = k
+		i++
+	}
+	m.lock.RUnlock()
+	return &keys
+}
+
+func (m *BeeMap) Size() int {
+	return len(m.bm)
 }

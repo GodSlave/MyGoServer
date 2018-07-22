@@ -24,6 +24,7 @@ type Gate struct {
 	redisPool       *redis.Pool
 	connCallBack    module.ConnectEventCallBack
 	disConnCallback module.ConnectEventCallBack
+	sessidMap       map[string]string // host  sessionId by userId
 }
 
 type MsgFormat struct {
@@ -50,14 +51,16 @@ func (m *Gate) OnInit(app module.App, settings *conf.ModuleSettings) {
 	//read setting
 	m.BaseModule.OnInit(m, app, settings) //这是必须的
 	m.redisPool = app.GetRedis()
-	m.GetServer().RegisterGO("PushMessage", 1, m.PushMessage)
+	m.GetServer().RegisterGO("PushMessageI", 1, m.PushMessage)
 	m.GetServer().RegisterGO("KickOut", 2, m.KickOut)
+	m.GetServer().RegisterGO("PushMessageF", 3, m.PushMessagef)
+	m.sessidMap = map[string]string{}
 }
 
 func (m *Gate) Run(closeSig chan bool) {
 
 	m.svr = &service.Server{
-		KeepAlive:        15,           // seconds
+		KeepAlive:        15,            // seconds
 		ConnectTimeout:   2,             // seconds
 		SessionsProvider: "mem",         // keeps sessions in memory
 		Authenticator:    "mockSuccess", // always succeed
@@ -181,7 +184,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 		}
 
 		if r.State != 0 {
-			log.Info("meet a error %v", r.State)
+			log.Info("meet a error %v   %v", r.State, r.Msg)
 		}
 
 		b, err := proto.Marshal(r)
@@ -225,6 +228,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 	}
 
 	packetId := msg.PacketId()
+	log.Info("%v", packetId)
 	serverSession, err := m.App.GetByteRouteServers(payload[0], "")
 	if err != nil {
 		log.Error("Service(type:%x) not found", payload[0])
@@ -233,6 +237,7 @@ func (m *Gate) progressProtoMessage(msg *message.PublishMessage, sess *sessions.
 	}
 
 	result, e := serverSession.CallByteArgs(payload[1], sess.Id, payload[2:])
+	log.Info("%v", result)
 	toResult(topic, result, payload[0:2], e, packetId)
 	return true
 }
@@ -265,6 +270,7 @@ func (m *Gate) OnDisConnect(sess *sessions.Session) {
 	if m.App.GetUserManager() != nil {
 		m.App.GetUserManager().OnUserDisconnect(sess.Id)
 	}
+	delete(m.sessidMap, m.App.GetUserManager().VerifyUserID(sess.Id))
 }
 
 func (m *Gate) OnConnect(sess *sessions.Session) {
@@ -275,6 +281,11 @@ func (m *Gate) OnConnect(sess *sessions.Session) {
 	if m.App.GetUserManager() != nil {
 		m.App.GetUserManager().OnUserConnect(sess.Id)
 	}
+	uid := m.App.GetUserManager().VerifyUserID(sess.Id)
+	if uid != "" {
+		m.sessidMap[uid ] = sess.Id
+	}
+
 }
 
 func (m *Gate) SetOnConnectCallBack(callback module.ConnectEventCallBack) {
@@ -285,7 +296,13 @@ func (m *Gate) SetOnDisConnectCallBack(callback module.ConnectEventCallBack) {
 }
 
 func (m *Gate) PushMessage(userId string, item *base.PushItem) {
-	service := m.getService(userId)
+	value, exits := m.sessidMap[userId]
+	key := userId
+	if exits {
+		key = value
+	}
+
+	service := m.getService(key)
 	if service != nil {
 		topic := []byte{'p'}
 		content, err := json.Marshal(item)
@@ -296,30 +313,40 @@ func (m *Gate) PushMessage(userId string, item *base.PushItem) {
 		}
 		log.Debug(string(content))
 
-		topic = []byte{'q'}
-		topic2 := []byte{'f'}
-		protoContent, _ := proto.Marshal(interface{}(item.Content).(proto.Message))
-		r := &AllResponse{
-			Msg:    "",
-			Result: protoContent,
+	} else {
+		log.Error("user not found")
+	}
+}
+
+func (m *Gate) PushMessagef(userId string, item *base.PushItem) {
+	value, exits := m.sessidMap[userId]
+	key := userId
+	if exits {
+		key = value
+	}
+	service := m.getService(key)
+	if service != nil {
+		topic := []byte{'f'}
+		response := &AllResponse{
+			Msg:    "push",
+			Result: item.Content,
 			State:  0,
 		}
-
-		realProtoMsg, _ := proto.Marshal(interface{}(r).(proto.Message))
-
-		if err == nil {
-			realContent := make([]byte, len(content)+2)
-			realContent[0] = item.Module
-			realContent[1] = item.PushType
-			copy(realContent[2:], content)
-			m.WriteMsg(topic, realProtoMsg, 0, service.GetSession())
-			m.WriteMsg(topic2, realProtoMsg, 0, service.GetSession())
-		} else {
-			log.Error(err.Error())
+		pushes, err := proto.Marshal(response)
+		if err != nil {
+			return
 		}
-	} else {
-	}
 
+		//protoContent, _ := proto.Marshal( interface{}(item.Content).(proto.Message))
+		realContent := make([]byte, len(pushes)+2)
+		realContent[0] = item.Module
+		realContent[1] = item.PushType
+		copy(realContent[2:],pushes)
+		log.Info("%v", realContent)
+		m.WriteMsg(topic, realContent, 0, service.GetSession())
+	} else {
+		log.Error("user not found")
+	}
 }
 
 func (m *Gate) getService(userId string) *service.Service {
@@ -345,7 +372,7 @@ func (m *Gate) getService(userId string) *service.Service {
 			}
 		}
 	}
-	log.Info("userModule Client not Connect :%s", userId)
+	log.Error("userModule Client not Connect :%s", userId)
 	return nil
 }
 

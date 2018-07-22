@@ -14,6 +14,7 @@ import (
 	"github.com/GodSlave/MyGoServer/utils/uuid"
 	"encoding/json"
 	"github.com/GodSlave/MyGoServer/module/smsAli"
+	"github.com/gogo/protobuf/proto"
 )
 
 type ModuleUser struct {
@@ -26,6 +27,7 @@ type ModuleUser struct {
 var verifyCodeKey = "VerifyCode"
 var verifyCodeTimeKey = "VerifyCodeTime"
 var forgotPasswordVerifyCodeKey = "forgotPasswordVerifyCodeKey"
+var ExpireTime = int32(7 * 24 * 3600)
 
 var Module = func() module.Module {
 	newGate := new(ModuleUser)
@@ -46,9 +48,7 @@ func (m *ModuleUser) OnInit(app module.App, settings *conf.ModuleSettings) {
 	m.GetServer().RegisterGO("ChangePasswordByPassword", 8, m.ChangePasswordByPassword)
 	m.GetServer().RegisterGO("CheckVerifyCodeAvailable", 9, m.checkVerifyCodeAvailable)
 	m.GetServer().RegisterGO("SendForgotPasswordVrifyCode", 10, m.ForgetPassword)
-
 	m.app = app
-
 	var user = &base.BaseUser{}
 	m.sqlEngine.Sync(user)
 }
@@ -75,6 +75,7 @@ func (m *ModuleUser) OnDestroy() {
 }
 
 func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *User_Login_Response, err *base.ErrorCode) {
+	log.Info(SessionId)
 	user := new(base.BaseUser)
 	has, err1 := m.sqlEngine.Where("name=?", form.Username).Get(user)
 	if err1 == nil && has {
@@ -92,7 +93,7 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 			loginReq := &User_Login_Response{
 				Token:        token,
 				RefreshToken: rToken,
-				ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+				ExpireAt:     ExpireTime,
 			}
 			m.GetApp().GetUserManager().OnUserLogin(user)
 			return loginReq, base.ErrNil
@@ -104,23 +105,54 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
 	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
 	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
-	if token != "" || session != "" && (currentSession != token && currentSession != user.UserID) {
+	if token != "" || session != "" && (currentSession != token && currentSession != user.UserID &&
+		currentSession != session) {
 		m.app.GetUserManager().OnUserLogOut(user)
 		go func() {
 			//send offline reason
 			pushItem := base.PushItem{
 				Module:   0,
 				PushType: 0,
-				Content: &base.PushContent{
-					Content: []byte("Other client Login"),
-				},
+				Content:  []byte("Other client Login"),
 			}
 			content, _ := json.Marshal(pushItem)
 			if session != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", session, content)
 				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
 			} else if token != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessage", session, content)
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", token, content)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
+			}
+		}()
+	}
+
+	if err != nil {
+		log.Error(err.Error())
+	}
+	m.notifyUserLogin(user, redisConn, currentSession)
+}
+
+func (m *ModuleUser) notifyUserLogin(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
+	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
+	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
+	if token != "" || session != "" {
+		go func() {
+			//send offline reason
+			response := &User_OnLoginSuccessNotify_Response{
+				Msg: "Login Success Push",
+			}
+			content, _ := proto.Marshal(response)
+			pushItem := base.PushItem{
+				Module:   2,
+				PushType: 11,
+				Content:  content,
+			}
+			pushContent,_ := json.Marshal(pushItem)
+			if session != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", session, pushContent)
+				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
+			} else if token != "" {
+				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", token, pushContent)
 				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
 			}
 		}()
@@ -178,7 +210,7 @@ func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (re
 		TokenInfo: &UserTokenData{
 			Token:        token,
 			RefreshToken: rToken,
-			ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+			ExpireAt:     int32(time.Date(0, 0, 7, 0, 0, 0, 0, time.UTC).Second()),
 		},
 	}, base.ErrNil
 }
@@ -202,7 +234,7 @@ func (m *ModuleUser) GetVerifyCode(SessionId string, form *User_GetVerifyCode_Re
 	serverSession, err1 := m.GetApp().GetRouteServers("SMS", "")
 	var errorCode *base.ErrorCode
 	if err1 == nil {
-		request := &smsAli.SendSms_Request{
+		request := &smsAli.SMS_SendSms_Request{
 			VerifyCode:  randString,
 			PhoneNumber: form.PhoneNumber,
 			UserId:      SessionId,
@@ -266,7 +298,7 @@ func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Requ
 			TokenData: &UserTokenData{
 				Token:        token,
 				RefreshToken: rToken,
-				ExpireAt:     time.Now().AddDate(0, 0, 7).Unix(),
+				ExpireAt:     ExpireTime,
 			},
 		}
 		return refreshResponse, base.ErrNil
@@ -274,7 +306,7 @@ func (m *ModuleUser) RefreshToken(sessionId string, form *User_RefreshToken_Requ
 	return nil, base.ErrInternal
 }
 
-func (m *ModuleUser) ForgetPassword(sessionId string, form *User_ForgetPassWord_Request) (result *User_ForgetPassWord_Response, err *base.ErrorCode) {
+func (m *ModuleUser) ForgetPassword(sessionId string, form *User_SendForgotPasswordVrifyCode_Request) (result *User_SendForgotPasswordVrifyCode_Response, err *base.ErrorCode) {
 
 	randString := uuid.RandNumbers(6)
 	conn := m.redisPool.Get()
@@ -297,7 +329,7 @@ func (m *ModuleUser) ForgetPassword(sessionId string, form *User_ForgetPassWord_
 		log.Error("operate redis error")
 		return nil, base.ErrInternal
 	}
-	return &User_ForgetPassWord_Response{}, base.ErrNil
+	return &User_SendForgotPasswordVrifyCode_Response{}, base.ErrNil
 
 }
 

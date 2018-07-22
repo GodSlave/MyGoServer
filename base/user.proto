@@ -6,14 +6,13 @@ option go_package = "../module/userModule";
 message UserTokenData {
     string token = 1;
     string refreshToken = 2;
-    int64 expireAt = 3;
+    int32 expireAt = 3;
 }
 
 
 message UserData {
     string UserName = 1;
     string UserID = 2;
-
 }
 
 message User_Login_Request {
@@ -21,10 +20,11 @@ message User_Login_Request {
     string password = 2;
 }
 
+
 message User_Login_Response {
     string token = 1;
     string refreshToken = 2;
-    int64 expireAt = 3;
+    int32 expireAt = 3;
 }
 
 message User_Register_Request {
@@ -55,11 +55,11 @@ message User_GetSelfInfo_Response {
     UserData userData = 1;
 }
 
-message User_LogOut_Request {
+message User_Logout_Request {
 
 }
 
-message User_LogOut_Response {
+message User_Logout_Response {
 }
 
 message User_RefreshToken_Request {
@@ -71,11 +71,11 @@ message User_RefreshToken_Response {
 }
 
 
-message User_ForgetPassWord_Request {
+message User_SendForgotPasswordVrifyCode_Request {
     string phoneNumber = 1;
 }
 
-message User_ForgetPassWord_Response {
+message User_SendForgotPasswordVrifyCode_Response {
 
 }
 
@@ -108,4 +108,8 @@ message User_CheckVerifyCodeAvailable_Request {
 message User_CheckVerifyCodeAvailable_Response {
     bool isAvalible = 1;
     bool isAccountTaken = 2;
+}
+
+message User_OnLoginSuccessNotify_Response{
+    string msg =1;
 }

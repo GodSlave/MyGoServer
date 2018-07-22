@@ -203,3 +203,8 @@ func (this *Session) Topics() ([]string, []byte, error) {
 func (this *Session) ID() string {
 	return string(this.Cmsg.ClientId())
 }
+
+func (this *Session) HasTopics(name string) bool {
+	_ ,exits:=this.topics[name]
+	return exits
+}

@@ -3,13 +3,13 @@ package Dolphin.Protocol;
 option go_package = "../module/smsAli";
 
 
-message SendSms_Request {
+message SMS_SendSms_Request {
     string verifyCode = 1;
     string phoneNumber = 2;
     string userId = 3;
 }
 
-message SendSms_Response {
+message SMS_SendSms_Response {
 
 
 }

@@ -353,7 +353,8 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 		Services:   this.Services,
 	}
 	err = this.getSession(svc, req, resp)
-	this.Services.Set(string(req.ClientId()), svc)
+	clientId := string(req.ClientId())
+	this.Services.Set(clientId, svc)
 	if err != nil {
 		return nil, err
 	}
