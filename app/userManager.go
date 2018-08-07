@@ -10,11 +10,13 @@ import (
 
 type DefaultUserManager struct {
 	module.UserManager
-	app              module.App
-	users            *lru.Cache
-	loginCallBack    module.UserEventCallBack
-	logOutCallBack   module.UserEventCallBack
-	registerCallBack module.UserEventCallBack
+	app                module.App
+	users              *lru.Cache
+	loginCallBack      module.UserEventCallBack
+	logOutCallBack     module.UserEventCallBack
+	registerCallBack   module.UserEventCallBack
+	disconnectCallBack []module.UserEventCallBack
+	connectCallBack    []module.UserEventCallBack
 }
 
 func InitUserManager(app module.App, lruSize int32) (um module.UserManager) {
@@ -36,7 +38,6 @@ func (um *DefaultUserManager) OnUserLogOut(user *base.BaseUser) {
 		_, err1 = conn.Do("DEL", base.REFRESH_TOKEN_PERFIX+rToken)
 		_, err1 = conn.Do("DEL", base.ID_TOKEN_PERFIX+user.UserID)
 		_, err1 = conn.Do("DEL", base.ID_REFRESH_TOKEN_PREFIX+user.UserID)
-
 
 		var session string
 		session, err1 = redis.String(conn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
@@ -85,6 +86,11 @@ func (um *DefaultUserManager) OnUserDisconnect(sessionId string) {
 				log.Error(err1.Error())
 			}
 		}
+
+		for _, callback := range um.disconnectCallBack {
+			callback(user1, um.app)
+		}
+
 	}
 }
 func (um *DefaultUserManager) VerifyUser(sessionId string) (user *base.BaseUser) {
@@ -110,6 +116,9 @@ func (um *DefaultUserManager) VerifyUser(sessionId string) (user *base.BaseUser)
 		return nil
 	}
 	um.users.Add(sessionId, user)
+	for _, callback := range um.connectCallBack {
+		callback(user, um.app)
+	}
 	return
 }
 func (um *DefaultUserManager) VerifyUserID(sessionId string) (userID string) {
@@ -136,4 +145,11 @@ func (um *DefaultUserManager) SetRegisterCallBack(callback module.UserEventCallB
 }
 func (um *DefaultUserManager) SetLogoutCallBack(callback module.UserEventCallBack) {
 	um.logOutCallBack = callback
+}
+func (um *DefaultUserManager) AddDisConnectCallBack(callback module.UserEventCallBack) {
+	um.disconnectCallBack = append(um.disconnectCallBack, callback)
+}
+
+func (um *DefaultUserManager) AddConnectCallBack(callback module.UserEventCallBack) {
+	um.connectCallBack = append(um.connectCallBack, callback)
 }

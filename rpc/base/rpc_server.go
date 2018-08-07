@@ -282,6 +282,7 @@ func (s *RPCServer) runFunc(callInfo mqrpc.CallInfo, callbacks chan<- mqrpc.Call
 				case error:
 					str := r.(error).Error()
 					rn = base.NewError(500, str)
+					log.Error(str)
 				}
 				buf := make([]byte, 1024)
 				l := runtime.Stack(buf, false)

@@ -1,11 +1,13 @@
-<!DOCTYPE html>
+package template
+
+const  HtmlContent=`<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
-    <title>Bootstrap 101 Template</title>
+    <title>BackEnd Sever</title>
 
     <!-- Bootstrap -->
     <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css"
@@ -20,7 +22,7 @@
     <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
     <script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <script src="./{{.m.ModuleName}}.js"></script>
+    <script src="./{{.StructName}}.js"></script>
     <style>
         .table {
             background-color: #fff;
@@ -60,9 +62,7 @@
             margin: 6px;
         }
 
-
     </style>
-
 </head>
 <body>
 <div class="row">
@@ -118,81 +118,35 @@
             </div>
             <div class="modal-body">
                 <form class="form-horizontal">
-                    <fieldset disabled>
+                    {{range $index,$A := .Items }}
+					  {{if eq $A.ItemName "Id"}}
+ 						<fieldset disabled>
                         <div class="form-group">
-                            <label for="inputID" class="col-sm-2 control-label">ID:</label>
+                            <label for="inputId" class="col-sm-2 control-label">Id:</label>
                             <div class="col-sm-2">
-                                <input type="number" class="form-control" id="inputID" placeholder="1" value="0">
+                                <input type="number" class="form-control" id="inputId" placeholder="1" value="0">
                             </div>
                         </div>
-                    </fieldset>
-                    {{range $index,$A := .m.Items }}
+                  		  </fieldset>
+					 {{else if eq $A.ItemType 1}}
+     <div class="form-group">
+                            <label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
+                            <div class="col-sm-2">
+                                <input type="number" class="form-control" id="input{{$A.ItemName}}" placeholder="1" value="0">
+                            </div>
+                        </div>
+   {{else if eq $A.ItemType 2}}
+   //json.{{$A.ItemName}}.push(document.getElementById('').value);
+   {{else }}
+					<div class="form-group">
+					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
+                                            <div class="col-sm-10">
+                                                <textarea rows="4" class="form-control" id="input{{$A.ItemName}}" placeholder="please input {{$A.ItemName}}"></textarea>
+                                            </div>
+                     
+                     </div>
                     {{end}}
-                    <div class="form-group">
-                        <label for="inputQuestion" class="col-sm-2 control-label">Question:</label>
-                        <div class="col-sm-10">
-                            <textarea rows="4" class="form-control" id="inputQuestion" placeholder="请输入问题"></textarea>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputAnswer0" class="col-sm-2 control-label">Answer0:</label>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" id="inputAnswer0" placeholder="第一个选项">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputAnswer1" class="col-sm-2 control-label">Answer1:</label>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" id="inputAnswer1" placeholder="第二个选项">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputAnswer2" class="col-sm-2 control-label">Answer2:</label>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" id="inputAnswer2" placeholder="第三个选项">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputAnswer3" class="col-sm-2 control-label">Answer3:</label>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" id="inputAnswer3" placeholder="第四个选项">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputRightAnswer" class="col-sm-2 control-label">RightAnswer:</label>
-                        <div class="col-sm-2">
-                            <select class="form-control" id="inputRightAnswer">
-                                <option>0</option>
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputTags" class="col-sm-2 control-label">Tags:</label>
-                        <div class="col-sm-3">
-                            <select class="form-control" id="inputTags">
-                                <option>无</option>
-                                <option>历史</option>
-                                <option>佛经</option>
-                                <option>地理</option>
-                                <option>人物</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputLevel" class="col-sm-2 control-label">Level:</label>
-                        <div class="col-sm-3">
-                            <select class="form-control" id="inputLevel">
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
-                                <option>5</option>
-                            </select>
-                        </div>
-                    </div>
+{{end}}
                 </form>
             </div>
 
@@ -216,7 +170,7 @@
             </div>
             <div class="modal-body">
                 <p>Delete？</p>
-                <h4 id="delete{{.m.StructName}}"/>
+                <h4 id="delete{{.StructName}}"/>
             </div>
             <div class="modal-footer">
                 <button type="button" data-dismiss="modal" class="btn btn-primary" id="Btn_Delete">Delete</button>
@@ -227,7 +181,7 @@
 
 <div class="row">
     <div class="col-md-4">
-        <button type="button" class="btn btn-primary btn-lg" onclick="Add{{.m.StructName}}()">
+        <button type="button" class="btn btn-primary btn-lg" onclick="Add{{.StructName}}()">
             添加问题
         </button>
     </div>
@@ -270,11 +224,6 @@
     Btn_Submit.onclick = function () {
         addContent(getFormData());
     }
-
 </script>
-
-
 </body>
-
-
-</html>
+</html>`

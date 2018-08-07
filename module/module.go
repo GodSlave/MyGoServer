@@ -95,6 +95,8 @@ type UserManager interface {
 	SetLoginCallBack(callback UserEventCallBack)
 	SetRegisterCallBack(callback UserEventCallBack)
 	SetLogoutCallBack(callback UserEventCallBack)
+	AddDisConnectCallBack(callback UserEventCallBack)
+	AddConnectCallBack(callback UserEventCallBack)
 }
 
 type Module interface {
@@ -153,3 +155,4 @@ type RPCSerialize interface {
  * 当服务器初始化完成以后开始服务后的回掉
  */
 type OnInitDownCallBack func(app App)
+

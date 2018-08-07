@@ -285,7 +285,6 @@ func (m *Gate) OnConnect(sess *sessions.Session) {
 	if uid != "" {
 		m.sessidMap[uid ] = sess.Id
 	}
-
 }
 
 func (m *Gate) SetOnConnectCallBack(callback module.ConnectEventCallBack) {
@@ -391,3 +390,4 @@ func (m *Gate) GetExecuting() int64 {
 	}
 	return 0
 }
+

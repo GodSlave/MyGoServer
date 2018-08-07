@@ -1,4 +1,6 @@
-function getPrevPage() {
+package template
+
+const JSContent  =`function getPrevPage() {
     if (CurrentPage > 0) {
         CurrentPage--;
         getData(CurrentPage);
@@ -22,7 +24,7 @@ function updateOrCreateData(json) {
         'key': ''
     }
     content.key = JSON.stringify(json)
-    $.post("/{{$m.ModuleName}}/update{{$m.StructName}}", content, function (data, status) {
+    $.post("/{{.ModuleName}}/update{{.StructName}}", content, function (data, status) {
         if (status == 'success') {
             getData(CurrentPage)
         } else {
@@ -32,19 +34,19 @@ function updateOrCreateData(json) {
 }
 
 var CurrentPage = 0;
-var Questions;
+var {{.StructName}}s;
 var AllPage;
 
 //  getData(CurrentPage);
 
 function getData(currentPage) {
-    $.get("/{{$m.ModuleName}}/{{$m.StructName}}s?page=" + currentPage, function (data, status) {
+    $.get("/{{.ModuleName}}/{{.StructName}}s?page=" + currentPage, function (data, status) {
         if (status == 'success') {
             var self = $("#test");
             self.empty();
             addHead();
             var obj = jQuery.parseJSON(data);
-            Questions = obj.Questions;
+            {{.StructName}}s = obj.{{.StructName}}s;
             AllPage = obj.AllPage;
             for (x in Questions) {
                 console.log(x)
@@ -56,15 +58,15 @@ function getData(currentPage) {
 
 function confirmDelete(index) {
     var json = Questions[index];
-    document.getElementById("deleteQuestion").innerHTML = json.Question;
+    document.getElementById("delete{{.StructName}}").innerHTML = json.{{.StructName}};
     $('#DeleteModal').modal('show')
     document.getElementById("Btn_Delete").onclick = function () {
-        deleteQuestion(json.Id)
+        delete{{.StructName}}(json.Id)
     }
 }
 
-function deleteQuestion(index) {
-    $.post("/{{$m.ModuleName}}/delete{{$m.StructName}}?id=" + index, function (data, status) {
+function delete{{.StructName}}(index) {
+    $.post("/{{.ModuleName}}/delete{{.StructName}}?id=" + index, function (data, status) {
         if (status == 'success') {
             getData(CurrentPage)
         } else {
@@ -77,12 +79,12 @@ function deleteQuestion(index) {
 
 function getFormData() {
     var json = {
-{{range $index,$A := .m.Items }}
-{{if $A.ItemType==1}}
+{{range $index,$A := .Items }}
+{{if eq $A.ItemType 1}}
     '{{$A.ItemName}}': 0,
-{{else if $A.ItemType==2}}
+{{else if  eq $A.ItemType 2}}
     '{{$A.ItemName}}': [],
-{{else if $A.ItemType==3}}
+{{else if eq $A.ItemType 3}}
     '{{$A.ItemName}}': '',
 {{else}}
     '{{$A.ItemName}}': '',
@@ -90,13 +92,13 @@ function getFormData() {
 {{end}}
     };
 
-   {{range $index,$A := .m.Items }}
-   {{if $A.ItemType==1}}
+   {{range $index,$A := .Items }}
+   {{if eq $A.ItemType 1}}
     json.{{$A.ItemName}} = parseInt(document.getElementById('input{{$A.ItemName}}').value);
-   {{else if $A.ItemType==2}}
+   {{else if eq $A.ItemType 2}}
    //json.{{$A.ItemName}}.push(document.getElementById('').value);
-   {{else if $A.ItemType==3}}
-   json.{{$A.ItemName}} = document.getElementById('input'{{$A.ItemName}}).value;
+   {{else if eq $A.ItemType 3}}
+   json.{{$A.ItemName}} = document.getElementById('input{{$A.ItemName}}').value;
    {{else}}
    {{end}}
    {{end}}
@@ -109,7 +111,7 @@ function getFormData() {
 function addHead() {
     var str = '   <thead>\n' +
         '    <tr>\n' +
-         {{range $index,$A := .m.Items }}
+         {{range $index,$A := .Items }}
          '        <th>{{$A.ItemName}}</th>\n' +
          {{end}}
         '    </tr>\n' +
@@ -125,7 +127,7 @@ function addContent(json, x) {
 
     $tr += '<tr class="active" id=content-' + json.Id +
         '><td scope="row">' + json.Id + '</td>';
-     {{range $index,$A := .m.Items }}
+     {{range $index,$A := .Items }}
              $tr += '<td class="active" width=100px>' + json.{{$A.ItemName}} + '</td>';
      {{end}}
     $tr += '<td class="active"><button type="button" class="btn" onclick= "update(' + x + ')"    padding-left=50px>Update</button>' +
@@ -135,19 +137,19 @@ function addContent(json, x) {
 
 function update(index) {
     var json = Questions[index];
-    {{range $index,$A := .m.Items }}
+    {{range $index,$A := .Items }}
           document.getElementById("input{{$A.ItemName}}").value = json.{{$A.ItemName}};
     {{end}}
     $('#EditModal').modal('show')
 }
 
-function AddQuestion() {
-{{range $index,$A := .m.Items }}
- {{if $A.ItemType==1}}
+function Add{{.StructName}}() {
+{{range $index,$A := .Items }}
+ {{if eq $A.ItemType 1}}
     document.getElementById("input{{$A.ItemName}}").value = 0;
-   {{else if $A.ItemType==2}}
+   {{else if eq $A.ItemType 2}}
    //document.getElementById('input{{$A.ItemName}}0').value = "";
-   {{else if $A.ItemType==3}}
+   {{else if eq $A.ItemType 3}}
    document.getElementById("input{{$A.ItemName}}").value = "";
    {{else}}
    document.getElementById("input{{$A.ItemName}}").value = "";
@@ -155,3 +157,4 @@ function AddQuestion() {
 {{end}}
     $('#EditModal').modal('show')
 }
+`
