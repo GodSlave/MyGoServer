@@ -1,4 +1,4 @@
-package info
+package User
 
 import (
 	"github.com/gin-gonic/gin"
@@ -10,23 +10,23 @@ import (
 	"encoding/json"
 )
 
-type infoWebData struct {
+type BaseUserWebData struct {
 	sql *xorm.Engine
 }
 
-type infoResponse struct {
-	infos   *[]bean.infoItem
+type BaseUserResponse struct {
+	BaseUsers   *[]bean.BaseUser
 	AllPage     int
 	CurrentPage int
 }
 
-func (m *infoWebData) Init(router *gin.Engine) {
-	router.GET("/info/get", m.get)
-	router.POST("/info/update", m.update)
-	router.POST("/info/delete", m.delete)
+func (m *BaseUserWebData) Init(router *gin.Engine) {
+	router.GET("/User/getBaseUsers", m.get)
+	router.POST("/User/updateBaseUser", m.update)
+	router.POST("/User/deleteBaseUser", m.delete)
 }
 
-func (m *infoWebData) get(c *gin.Context) {
+func (m *BaseUserWebData) get(c *gin.Context) {
 	page := c.DefaultQuery("page", "0")
 	pagei, err := strconv.Atoi(page)
 	if err != nil {
@@ -34,8 +34,8 @@ func (m *infoWebData) get(c *gin.Context) {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
 		return
 	}
-	infoItems := &[]bean.infoItem{}
-	err = m.sql.Limit(20, 20*pagei).Find(infoItems)
+	BaseUsers := &[]bean.BaseUser{}
+	err = m.sql.Limit(20, 20*pagei).Find(BaseUsers)
 
 	if err != nil {
 		log.Error(err.Error())
@@ -43,7 +43,7 @@ func (m *infoWebData) get(c *gin.Context) {
 		return
 	}
 
-	count, err := m.sql.Count(&bean.infoItems{})
+	count, err := m.sql.Count(&bean.BaseUser{})
 	var allPage int
 	if count%20 == 0 {
 		allPage = int(count / 20)
@@ -51,8 +51,8 @@ func (m *infoWebData) get(c *gin.Context) {
 		allPage = int(count/20 + 1)
 	}
 	log.Info("%v", allPage)
-	response := &infoResponse{
-		infoItems:   infoItems,
+	response := &BaseUserResponse{
+		BaseUsers:   BaseUsers,
 		AllPage:     allPage,
 		CurrentPage: pagei,
 	}
@@ -65,28 +65,28 @@ func (m *infoWebData) get(c *gin.Context) {
 	c.Done()
 }
 
-func (m *infoWebData) update(c *gin.Context) {
+func (m *BaseUserWebData) update(c *gin.Context) {
 	content := c.PostForm("key")
-	infoItem := &bean.infoItem{
+	BaseUser := &bean.BaseUser{
 	}
-	err := json.Unmarshal([]byte(content), infoItem)
+	err := json.Unmarshal([]byte(content), BaseUser)
 	if err != nil {
 		log.Error(err.Error())
 		c.AbortWithStatus(http.StatusNotAcceptable)
 		return
 	}
 
-	if infoItem.Id > 0 {
-		m.sql.Id(infoItem.Id).Update(infoItem)
+	if BaseUser.Id > 0 {
+		m.sql.Id(BaseUser.Id).Update(BaseUser)
 	} else {
-		m.sql.Insert(infoItem)
+		m.sql.Insert(BaseUser)
 	}
 	c.Status(http.StatusOK)
 }
 
-func (m *infoWebData) delete(c *gin.Context) {
+func (m *BaseUserWebData) delete(c *gin.Context) {
 	content := c.DefaultQuery("id", "0")
-	id, err := strconv.Atoi(content)
+	id, err := strconv.ParseInt(content,10,64)
 	log.Info("%v", id)
 	if err != nil {
 		log.Error(err.Error())
@@ -94,7 +94,7 @@ func (m *infoWebData) delete(c *gin.Context) {
 		return
 	}
 
-	_, err = m.sql.Delete(&bean.infoItem{Id: int32(id)})
+	_, err = m.sql.Delete(&bean.BaseUser{Id: id})
 	if err != nil {
 		log.Error(err.Error())
 		c.AbortWithStatus(http.StatusInternalServerError)

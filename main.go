@@ -1,6 +1,9 @@
 package main
 
-import "github.com/GodSlave/MyGoServer/template"
+import (
+	"github.com/GodSlave/MyGoServer/template"
+	"github.com/GodSlave/MyGoServer/base"
+)
 
 var (
 	Version string
@@ -13,20 +16,5 @@ func main() {
 	//webModule := web_Module.(*web.ModuleWeb)
 	//webModule.Router = gin.Default()
 	//app.Run(gate.Module(), userModule.Module(), httpGate.Module(), web_Module)
-
-	template.Export(&template.ModuleInfo{
-		ModuleName: "test",
-		StructName: "info",
-		Items: []*template.StructItem{
-			&template.StructItem{
-				ItemName: "Id",
-				ItemType: template.TYPE_INT,
-			},
-			&template.StructItem{
-				ItemName: "Name",
-				ItemType: template.TYPE_STRING,
-			},
-		},
-	})
-
+	template.BuildModel(base.BaseUser{},"User")
 }

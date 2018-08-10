@@ -1,6 +1,6 @@
 package template
 
-const BGWebContent=`package {{.StructName}}
+const BGWebContent=`package {{.ModuleName}}
 
 import (
 	"github.com/gin-gonic/gin"
@@ -17,15 +17,15 @@ type {{.StructName}}WebData struct {
 }
 
 type {{.StructName}}Response struct {
-	{{.StructName}}s   *[]bean.{{.StructName}}Item
+	{{.StructName}}s   *[]bean.{{.StructName}}
 	AllPage     int
 	CurrentPage int
 }
 
 func (m *{{.StructName}}WebData) Init(router *gin.Engine) {
-	router.GET("/{{.StructName}}/get", m.get)
-	router.POST("/{{.StructName}}/update", m.update)
-	router.POST("/{{.StructName}}/delete", m.delete)
+	router.GET("/{{.ModuleName}}/get{{.StructName}}s", m.get)
+	router.POST("/{{.ModuleName}}/update{{.StructName}}", m.update)
+	router.POST("/{{.ModuleName}}/delete{{.StructName}}", m.delete)
 }
 
 func (m *{{.StructName}}WebData) get(c *gin.Context) {
@@ -36,8 +36,8 @@ func (m *{{.StructName}}WebData) get(c *gin.Context) {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
 		return
 	}
-	{{.StructName}}Items := &[]bean.{{.StructName}}Item{}
-	err = m.sql.Limit(20, 20*pagei).Find({{.StructName}}Items)
+	{{.StructName}}s := &[]bean.{{.StructName}}{}
+	err = m.sql.Limit(20, 20*pagei).Find({{.StructName}}s)
 
 	if err != nil {
 		log.Error(err.Error())
@@ -45,7 +45,7 @@ func (m *{{.StructName}}WebData) get(c *gin.Context) {
 		return
 	}
 
-	count, err := m.sql.Count(&bean.{{.StructName}}Items{})
+	count, err := m.sql.Count(&bean.{{.StructName}}{})
 	var allPage int
 	if count%20 == 0 {
 		allPage = int(count / 20)
@@ -54,7 +54,7 @@ func (m *{{.StructName}}WebData) get(c *gin.Context) {
 	}
 	log.Info("%v", allPage)
 	response := &{{.StructName}}Response{
-		{{.StructName}}Items:   {{.StructName}}Items,
+		{{.StructName}}s:   {{.StructName}}s,
 		AllPage:     allPage,
 		CurrentPage: pagei,
 	}
@@ -69,26 +69,26 @@ func (m *{{.StructName}}WebData) get(c *gin.Context) {
 
 func (m *{{.StructName}}WebData) update(c *gin.Context) {
 	content := c.PostForm("key")
-	{{.StructName}}Item := &bean.{{.StructName}}Item{
+	{{.StructName}} := &bean.{{.StructName}}{
 	}
-	err := json.Unmarshal([]byte(content), {{.StructName}}Item)
+	err := json.Unmarshal([]byte(content), {{.StructName}})
 	if err != nil {
 		log.Error(err.Error())
 		c.AbortWithStatus(http.StatusNotAcceptable)
 		return
 	}
 
-	if {{.StructName}}Item.Id > 0 {
-		m.sql.Id({{.StructName}}Item.Id).Update({{.StructName}}Item)
+	if {{.StructName}}.Id > 0 {
+		m.sql.Id({{.StructName}}.Id).Update({{.StructName}})
 	} else {
-		m.sql.Insert({{.StructName}}Item)
+		m.sql.Insert({{.StructName}})
 	}
 	c.Status(http.StatusOK)
 }
 
 func (m *{{.StructName}}WebData) delete(c *gin.Context) {
 	content := c.DefaultQuery("id", "0")
-	id, err := strconv.Atoi(content)
+	id, err := strconv.ParseInt(content,10,64)
 	log.Info("%v", id)
 	if err != nil {
 		log.Error(err.Error())
@@ -96,7 +96,7 @@ func (m *{{.StructName}}WebData) delete(c *gin.Context) {
 		return
 	}
 
-	_, err = m.sql.Delete(&bean.{{.StructName}}Item{Id: int32(id)})
+	_, err = m.sql.Delete(&bean.{{.StructName}}{Id: id})
 	if err != nil {
 		log.Error(err.Error())
 		c.AbortWithStatus(http.StatusInternalServerError)

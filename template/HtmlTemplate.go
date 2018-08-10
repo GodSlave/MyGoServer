@@ -67,11 +67,6 @@ const  HtmlContent=`<!DOCTYPE html>
 <body>
 <div class="row">
     <div class="col-md-4">
-        <button type="button" class="btn btn-primary btn-lg" onclick="AddQuestion()">
-            添加问题
-        </button>
-    </div>
-    <div class="col-md-4">
         <nav aria-label="Page navigation">
             <ul class="pagination">
                 <li>

@@ -40,7 +40,7 @@ var AllPage;
 //  getData(CurrentPage);
 
 function getData(currentPage) {
-    $.get("/{{.ModuleName}}/{{.StructName}}s?page=" + currentPage, function (data, status) {
+    $.get("/{{.ModuleName}}/get{{.StructName}}s?page=" + currentPage, function (data, status) {
         if (status == 'success') {
             var self = $("#test");
             self.empty();
@@ -48,9 +48,9 @@ function getData(currentPage) {
             var obj = jQuery.parseJSON(data);
             {{.StructName}}s = obj.{{.StructName}}s;
             AllPage = obj.AllPage;
-            for (x in Questions) {
+            for (x in {{.StructName}}s) {
                 console.log(x)
-                addContent(obj.Questions[x], x)
+                addContent(obj.{{.StructName}}s[x], x)
             }
         }
     })
@@ -80,29 +80,20 @@ function delete{{.StructName}}(index) {
 function getFormData() {
     var json = {
 {{range $index,$A := .Items }}
-{{if eq $A.ItemType 1}}
-    '{{$A.ItemName}}': 0,
-{{else if  eq $A.ItemType 2}}
-    '{{$A.ItemName}}': [],
-{{else if eq $A.ItemType 3}}
-    '{{$A.ItemName}}': '',
-{{else}}
-    '{{$A.ItemName}}': '',
+{{if eq $A.ItemType 1}} '{{$A.ItemName}}': 0,
+{{else if  eq $A.ItemType 2}} '{{$A.ItemName}}': [],
+{{else if eq $A.ItemType 3}} '{{$A.ItemName}}': '',
+{{else}}'{{$A.ItemName}}': '',
 {{end}}
 {{end}}
     };
-
    {{range $index,$A := .Items }}
-   {{if eq $A.ItemType 1}}
-    json.{{$A.ItemName}} = parseInt(document.getElementById('input{{$A.ItemName}}').value);
-   {{else if eq $A.ItemType 2}}
-   //json.{{$A.ItemName}}.push(document.getElementById('').value);
-   {{else if eq $A.ItemType 3}}
-   json.{{$A.ItemName}} = document.getElementById('input{{$A.ItemName}}').value;
+   {{if eq $A.ItemType 1}} json.{{$A.ItemName}} = parseInt(document.getElementById('input{{$A.ItemName}}').value);
+   {{else if eq $A.ItemType 2}}//json.{{$A.ItemName}}.push(document.getElementById('').value);
+   {{else if eq $A.ItemType 3}}json.{{$A.ItemName}} = document.getElementById('input{{$A.ItemName}}').value;
    {{else}}
    {{end}}
    {{end}}
-
     console.log(JSON.stringify(json))
     updateOrCreateData(json)
     return json;
@@ -116,7 +107,6 @@ function addHead() {
          {{end}}
         '    </tr>\n' +
         '    </thead>'
-
     var self = $("#test");
     self.append(str)
 }
@@ -124,11 +114,13 @@ function addHead() {
 function addContent(json, x) {
     var self = $("#test");
     var $tr = '';
-
-    $tr += '<tr class="active" id=content-' + json.Id +
-        '><td scope="row">' + json.Id + '</td>';
      {{range $index,$A := .Items }}
-             $tr += '<td class="active" width=100px>' + json.{{$A.ItemName}} + '</td>';
+			{{if eq $A.ItemName "Id"}}
+ 			$tr += '<tr class="active" id=content-' + json.Id +
+        		'><td scope="row">' + json.Id + '</td>';
+			{{else}}
+				$tr += '<td class="active" width=100px>' + json.{{$A.ItemName}} + '</td>';
+			{{end}}
      {{end}}
     $tr += '<td class="active"><button type="button" class="btn" onclick= "update(' + x + ')"    padding-left=50px>Update</button>' +
         '<button type="button" class="btn  btn-warning"   onclick= "confirmDelete(' + x + ')">Delete</button></td></tr>';

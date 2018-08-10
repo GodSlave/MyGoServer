@@ -7,18 +7,20 @@ import (
 	"strings"
 	"fmt"
 	"path/filepath"
+	"reflect"
 )
 
 type ModuleInfo struct {
 	ModuleName string
 	StructName string
 	Items      []*StructItem
-
 }
 
 const TYPE_INT = 1
 const TYPE_ARRAY = 2
 const TYPE_STRING = 3
+const TYPE_BOOL = 4
+const TYPE_FLOAT = 5
 
 type StructItem struct {
 	ItemName    string
@@ -44,6 +46,35 @@ func (printer *Printer) Write(p []byte) (n int, err error) {
 		fmt.Println(err.Error())
 	}
 	return 0, err
+}
+
+func BuildModel(mStruct interface{}, moduleName string) {
+	moduleInfo := &ModuleInfo{}
+	t := reflect.TypeOf(mStruct)
+	moduleInfo.StructName = t.Name()
+	moduleInfo.ModuleName = moduleName
+	for i := 0; i < t.NumField(); i++ {
+		structItem := &StructItem{}
+		f := t.Field(i)
+		structItem.DisPlayName, _ = f.Tag.Lookup("name")
+		structItem.ItemName = f.Name
+		switch f.Type.Kind() {
+		case reflect.Bool:
+			structItem.ItemType = TYPE_BOOL
+		case reflect.String:
+			structItem.ItemType = TYPE_STRING
+		case reflect.Float32, reflect.Float64:
+			structItem.ItemType = TYPE_FLOAT
+		case reflect.Array:
+			structItem.ItemType = TYPE_ARRAY
+		case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
+			structItem.ItemType = TYPE_STRING
+		default:
+			log.Error("unknowType %s", f.Type.Kind().String())
+		}
+		moduleInfo.Items = append(moduleInfo.Items, structItem)
+	}
+	Export(moduleInfo)
 }
 
 func Export(m *ModuleInfo) {
