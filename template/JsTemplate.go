@@ -80,20 +80,19 @@ function delete{{.StructName}}(index) {
 function getFormData() {
     var json = {
 {{range $index,$A := .Items }}
-{{if eq $A.ItemType 1}} '{{$A.ItemName}}': 0,
-{{else if  eq $A.ItemType 2}} '{{$A.ItemName}}': [],
-{{else if eq $A.ItemType 3}} '{{$A.ItemName}}': '',
+{{if eq $A.ItemType "int"}} '{{$A.ItemName}}': 0,
+{{else if  eq $A.ItemType "array"}} '{{$A.ItemName}}': [],
+{{else if eq $A.ItemType "float"}} '{{$A.ItemName}}': 0,
+{{else if eq $A.ItemType "string"}} '{{$A.ItemName}}': '',
 {{else}}'{{$A.ItemName}}': '',
-{{end}}
-{{end}}
+{{end}}{{end}}
     };
    {{range $index,$A := .Items }}
-   {{if eq $A.ItemType 1}} json.{{$A.ItemName}} = parseInt(document.getElementById('input{{$A.ItemName}}').value);
-   {{else if eq $A.ItemType 2}}//json.{{$A.ItemName}}.push(document.getElementById('').value);
-   {{else if eq $A.ItemType 3}}json.{{$A.ItemName}} = document.getElementById('input{{$A.ItemName}}').value;
-   {{else}}
-   {{end}}
-   {{end}}
+   {{if eq $A.ItemType "int"}} json.{{$A.ItemName}} = parseInt(document.getElementById('input{{$A.ItemName}}').value);
+   {{else if eq $A.ItemType "array"}}//json.{{$A.ItemName}}.push(document.getElementById('').value);
+   {{else if eq $A.ItemType "float"}}json.{{$A.ItemName}} =parseFloat( document.getElementById('input{{$A.ItemName}}').value);
+   {{else}}json.{{$A.ItemName}} = document.getElementById('input{{$A.ItemName}}').value;
+   {{end}}{{end}}
     console.log(JSON.stringify(json))
     updateOrCreateData(json)
     return json;
@@ -128,7 +127,7 @@ function addContent(json, x) {
 }
 
 function update(index) {
-    var json = Questions[index];
+    var json = {{.StructName}}s[index];
     {{range $index,$A := .Items }}
           document.getElementById("input{{$A.ItemName}}").value = json.{{$A.ItemName}};
     {{end}}
@@ -137,13 +136,15 @@ function update(index) {
 
 function Add{{.StructName}}() {
 {{range $index,$A := .Items }}
- {{if eq $A.ItemType 1}}
+ {{if eq $A.ItemType "int"}}
     document.getElementById("input{{$A.ItemName}}").value = 0;
-   {{else if eq $A.ItemType 2}}
+   {{else if eq $A.ItemType "array"}}
    //document.getElementById('input{{$A.ItemName}}0').value = "";
-   {{else if eq $A.ItemType 3}}
+   {{else if eq $A.ItemType "string"}}
    document.getElementById("input{{$A.ItemName}}").value = "";
-   {{else}}
+   {{else if eq $A.ItemType "float"}}
+	document.getElementById("input{{$A.ItemName}}").value = 0;
+   {{else }}
    document.getElementById("input{{$A.ItemName}}").value = "";
    {{end}}
 {{end}}

@@ -16,15 +16,15 @@ type ModuleInfo struct {
 	Items      []*StructItem
 }
 
-const TYPE_INT = 1
-const TYPE_ARRAY = 2
-const TYPE_STRING = 3
-const TYPE_BOOL = 4
-const TYPE_FLOAT = 5
+const TYPE_INT = "int"
+const TYPE_ARRAY = "array"
+const TYPE_STRING = "string"
+const TYPE_BOOL = "bool"
+const TYPE_FLOAT = "float"
 
 type StructItem struct {
 	ItemName    string
-	ItemType    int
+	ItemType    string
 	DisPlayName string
 }
 
@@ -68,7 +68,7 @@ func BuildModel(mStruct interface{}, moduleName string) {
 		case reflect.Array:
 			structItem.ItemType = TYPE_ARRAY
 		case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
-			structItem.ItemType = TYPE_STRING
+			structItem.ItemType = TYPE_INT
 		default:
 			log.Error("unknowType %s", f.Type.Kind().String())
 		}
@@ -78,7 +78,7 @@ func BuildModel(mStruct interface{}, moduleName string) {
 }
 
 func Export(m *ModuleInfo) {
-
+	err := os.MkdirAll("./template/public/", os.ModePerm)
 	tplhtml, err := template.New("serverhtml.template").Parse(HtmlContent)
 	if err != nil {
 		log.Error(err.Error())

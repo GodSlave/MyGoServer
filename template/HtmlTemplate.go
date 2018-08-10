@@ -114,6 +114,7 @@ const  HtmlContent=`<!DOCTYPE html>
             <div class="modal-body">
                 <form class="form-horizontal">
                     {{range $index,$A := .Items }}
+                      
 					  {{if eq $A.ItemName "Id"}}
  						<fieldset disabled>
                         <div class="form-group">
@@ -123,25 +124,31 @@ const  HtmlContent=`<!DOCTYPE html>
                             </div>
                         </div>
                   		  </fieldset>
-					 {{else if eq $A.ItemType 1}}
-     <div class="form-group">
-                            <label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-                            <div class="col-sm-2">
-                                <input type="number" class="form-control" id="input{{$A.ItemName}}" placeholder="1" value="0">
-                            </div>
-                        </div>
-   {{else if eq $A.ItemType 2}}
-   //json.{{$A.ItemName}}.push(document.getElementById('').value);
-   {{else }}
+					 {{else if eq $A.ItemType "int"}}
+     							<div class="form-group">
+					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
+    				<input type="number" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+  					</div>
+   					{{else if eq $A.ItemType "array"}}
+						
+   						//json.{{$A.ItemName}}.push(document.getElementById('').value);
+					{{else if eq $A.ItemType "bool"}}
+								<div class="form-group">
+					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
+    				<input type="checkbox" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+  					</div>
+					{{else if eq $A.ItemType "float"}}
+							<div class="form-group">
+					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
+    				<input type="number" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+  					</div>
+   					{{else }}
 					<div class="form-group">
 					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-                                            <div class="col-sm-10">
-                                                <textarea rows="4" class="form-control" id="input{{$A.ItemName}}" placeholder="please input {{$A.ItemName}}"></textarea>
-                                            </div>
-                     
-                     </div>
+    				<input type="text" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+  					</div>
                     {{end}}
-{{end}}
+					{{end}}
                 </form>
             </div>
 
