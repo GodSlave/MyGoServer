@@ -127,25 +127,25 @@ const  HtmlContent=`<!DOCTYPE html>
 					 {{else if eq $A.ItemType "int"}}
      							<div class="form-group">
 					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-    				<input type="number" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+    				<input type="number" id="input{{$A.ItemName}}" class="form-control"  >
   					</div>
    					{{else if eq $A.ItemType "array"}}
 						
    						//json.{{$A.ItemName}}.push(document.getElementById('').value);
 					{{else if eq $A.ItemType "bool"}}
-								<div class="form-group">
+					<div class="form-group">
 					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-    				<input type="checkbox" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+    				<input type="checkbox" id="input{{$A.ItemName}}" class="form-control"  >
   					</div>
 					{{else if eq $A.ItemType "float"}}
 							<div class="form-group">
 					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-    				<input type="number" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+    				<input type="number" id="input{{$A.ItemName}}" class="form-control"  >
   					</div>
    					{{else }}
 					<div class="form-group">
 					<label for="input{{$A.ItemName}}" class="col-sm-2 control-label">{{$A.ItemName}}:</label>
-    				<input type="text" id="input{{$A.ItemName}}" class="form-control" id="exampleInputEmail1" placeholder="Email">
+    				<input type="text" id="input{{$A.ItemName}}" class="form-control"  placeholder="{{$A.ItemName}}">
   					</div>
                     {{end}}
 					{{end}}

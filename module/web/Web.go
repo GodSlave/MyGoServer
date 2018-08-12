@@ -10,6 +10,7 @@ import (
 
 type WebHandlers interface {
 	Init(router *gin.Engine)
+	SetEngine(sqlEngine *xorm.Engine)
 }
 
 type ModuleWeb struct {
@@ -46,6 +47,7 @@ func (m *ModuleWeb) Run(closeSig chan bool) {
 		"", "./public")
 	for _, value := range m.WebModules {
 		value.Init(m.Router)
+		value.SetEngine(m.sqlEngine)
 	}
 	m.Router.Run(":8090")
 	<-closeSig

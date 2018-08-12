@@ -1,13 +1,13 @@
 package template
 
-const BGWebContent=`package {{.ModuleName}}
+const BGWebContent=`package backend
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-xorm/xorm"
 	"strconv"
 	"net/http"
-	"MyServer/bean"
+	"../bean"
 	"github.com/GodSlave/MyGoServer/log"
 	"encoding/json"
 )
@@ -104,5 +104,9 @@ func (m *{{.StructName}}WebData) delete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func (m *{{.StructName}}WebData) SetEngine(sqlEngine *xorm.Engine) {
+	m.sql=sqlEngine
 }
 `

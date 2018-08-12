@@ -65,12 +65,12 @@ func BuildModel(mStruct interface{}, moduleName string) {
 			structItem.ItemType = TYPE_STRING
 		case reflect.Float32, reflect.Float64:
 			structItem.ItemType = TYPE_FLOAT
-		case reflect.Array:
+		case reflect.Array,reflect.Slice:
 			structItem.ItemType = TYPE_ARRAY
 		case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8:
 			structItem.ItemType = TYPE_INT
 		default:
-			log.Error("unknowType %s", f.Type.Kind().String())
+			log.Error("unknowType %s  %s", f.Type.Kind().String(),f.Name)
 		}
 		moduleInfo.Items = append(moduleInfo.Items, structItem)
 	}
@@ -79,6 +79,7 @@ func BuildModel(mStruct interface{}, moduleName string) {
 
 func Export(m *ModuleInfo) {
 	err := os.MkdirAll("./template/public/", os.ModePerm)
+	err = os.MkdirAll("./template/backend/", os.ModePerm)
 	tplhtml, err := template.New("serverhtml.template").Parse(HtmlContent)
 	if err != nil {
 		log.Error(err.Error())
@@ -95,7 +96,7 @@ func Export(m *ModuleInfo) {
 		log.Error(err.Error())
 	}
 	var printerBg = Printer{}
-	printerBg.F, err = os.OpenFile("./template/public"+string(filepath.Separator)+m.StructName+"Backend.go", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	printerBg.F, err = os.OpenFile("./template/backend"+string(filepath.Separator)+m.StructName+"Backend.go", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	err = tplBg.Execute(&printerBg, m)
 	if err != nil {
 		log.Error(err.Error())
