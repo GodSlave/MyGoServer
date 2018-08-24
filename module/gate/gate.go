@@ -71,9 +71,9 @@ func (m *Gate) Run(closeSig chan bool) {
 	// Listen and serve connections at localhost:1883
 	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
 	m.svr.ListenAndServe(addr)
+	m.svr.ListenAndServeWebSocket(":1884")
 	<-closeSig
 	m.svr.Close()
-
 }
 
 func (m *Gate) OnDestroy() {

@@ -31,6 +31,8 @@ import (
 	"github.com/GodSlave/MyGoServer/mqtt/topics"
 	"github.com/GodSlave/MyGoServer/mqtt"
 	"github.com/GodSlave/MyGoServer/utils"
+	"net/http"
+	"github.com/gorilla/websocket"
 )
 
 var (
@@ -117,6 +119,22 @@ type Server struct {
 
 	subs []interface{}
 	qoss []byte
+}
+func (this *Server)ListenAndServeWebSocket(uri string){
+	http.HandleFunc("/ws", this.wsHandler)
+	http.ListenAndServe(uri,nil)
+}
+
+func (this *Server)wsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Origin") != "http://"+r.Host {
+		http.Error(w, "Origin not allowed", 403)
+		return
+	}
+	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
+	if err != nil {
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+	}
+	go this.handleConnection(conn)
 }
 
 // ListenAndServe listents to connections on the URI requested, and handles any
