@@ -60,7 +60,7 @@ func (this *Service) receiver() {
 
 	switch conn := this.conn.(type) {
 	case net.Conn:
-		//log.Debug("server/handleConnection: Setting read deadline to %d", time.Second*time.Duration(this.keepAlive))
+		log.Debug("server/handleConnection: Setting read deadline to %d", time.Second*time.Duration(this.keepAlive))
 		keepAlive := time.Second * time.Duration(this.keepAlive)
 		r := timeoutReader{
 			d:    keepAlive + (keepAlive / 2),
@@ -69,7 +69,6 @@ func (this *Service) receiver() {
 
 		for {
 			_, err := this.in.ReadFrom(r)
-
 			if err != nil {
 				if err != io.EOF {
 					log.Info("(%s) error reading from connection: %v", this.cid(), err)
@@ -79,6 +78,7 @@ func (this *Service) receiver() {
 		}
 
 		//case *websocket.Conn:
+		//
 		//	log.Errorf("(%s) Websocket: %v", this.cid(), ErrInvalidConnectionType)
 
 	default:

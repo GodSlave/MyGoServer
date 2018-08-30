@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-
 	"github.com/surgemq/message"
 )
 
@@ -31,7 +30,6 @@ func getConnectMessage(conn io.Closer) (*message.ConnectMessage, error) {
 	}
 
 	msg := message.NewConnectMessage()
-
 	_, err = msg.Decode(buf)
 	//glog.Debugf("Received: %s", msg)
 	return msg, err
@@ -54,6 +52,7 @@ func getConnackMessage(conn io.Closer) (*message.ConnackMessage, error) {
 func writeMessage(conn io.Closer, msg message.Message) error {
 	buf := make([]byte, msg.Len())
 	_, err := msg.Encode(buf)
+
 	if err != nil {
 		//glog.Debugf("Write error: %v", err)
 		return err
@@ -131,12 +130,10 @@ func writeMessageBuffer(c io.Closer, b []byte) error {
 	if c == nil {
 		return ErrInvalidConnectionType
 	}
-
 	conn, ok := c.(net.Conn)
 	if !ok {
 		return ErrInvalidConnectionType
 	}
-
 	_, err := conn.Write(b)
 	return err
 }

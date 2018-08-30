@@ -32,7 +32,7 @@ import (
 	"github.com/GodSlave/MyGoServer/mqtt"
 	"github.com/GodSlave/MyGoServer/utils"
 	"net/http"
-	"github.com/gorilla/websocket"
+	"golang.org/x/net/websocket"
 )
 
 var (
@@ -51,6 +51,10 @@ const (
 	DefaultAuthenticator    = "mockSuccess"
 	DefaultTopicsProvider   = "mem"
 )
+
+type msg struct {
+	Num int
+}
 
 // Server is a library implementation of the MQTT server that, as best it can, complies
 // with the MQTT 3.1 and 3.1.1 specs.
@@ -120,17 +124,21 @@ type Server struct {
 	subs []interface{}
 	qoss []byte
 }
-func (this *Server)ListenAndServeWebSocket(uri string){
-	http.HandleFunc("/ws", this.wsHandler)
-	http.ListenAndServe(uri,nil)
-}
 
-func (this *Server)wsHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
-	if err != nil {
-		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+func (this *Server) ListenAndServeWebSocket(uri string) {
+
+	h := func(ws *websocket.Conn) {
+		ws.PayloadType = websocket.BinaryFrame
+		_, err := this.handleConnection(ws)
+		if err != nil {
+			log.Error(err.Error())
+		}
 	}
-	go this.handleConnection(conn)
+	http.Handle("/ws", websocket.Handler(h))
+	error := http.ListenAndServe(uri, nil)
+	if (error != nil) {
+		log.Error(error.Error())
+	}
 }
 
 // ListenAndServe listents to connections on the URI requested, and handles any
@@ -372,7 +380,6 @@ func (this *Server) handleConnection(c io.Closer) (svc *Service, err error) {
 	if err != nil {
 		return nil, err
 	}
-
 	resp.SetReturnCode(message.ConnectionAccepted)
 
 	if err = writeMessage(c, resp); err != nil {

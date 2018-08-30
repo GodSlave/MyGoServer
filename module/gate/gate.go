@@ -68,10 +68,13 @@ func (m *Gate) Run(closeSig chan bool) {
 		BusinessAgent:    m,
 		Services:         utils.NewBeeMap(),
 	}
+
+ 	go m.svr.ListenAndServeWebSocket(":1885")
+
 	// Listen and serve connections at localhost:1883
 	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
-	m.svr.ListenAndServe(addr)
-	m.svr.ListenAndServeWebSocket(":1884")
+	go m.svr.ListenAndServe(addr)
+
 	<-closeSig
 	m.svr.Close()
 }
