@@ -333,7 +333,7 @@ func (this *Service) processSubscribe(msg *message.SubscribeMessage) (err error)
 					if err == nil {
 						md5result := base.GetMd5T([]byte(this.sess.Id), randBytes)
 						this.sess.AesKey = md5result[:]
-						//log.Info("AesKey is %v", md5result)
+						log.Info("AesKey is %v", md5result)
 					} else {
 						log.Error(err.Error())
 					}

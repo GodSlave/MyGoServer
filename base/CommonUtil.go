@@ -2,12 +2,14 @@ package base
 
 import (
 	"crypto/md5"
+	"github.com/GodSlave/MyGoServer/log"
 )
 
 func GetMd5(allBytes []byte) []byte {
 
 	allBytes[32], allBytes[6] = allBytes[6], allBytes[32]
 	allBytes[48], allBytes[31] = allBytes[31], allBytes[48]
+	log.Info("AesKey  before is %v", allBytes)
 	md5result := md5.Sum(allBytes)
 	return md5result[:]
 }

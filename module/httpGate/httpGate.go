@@ -34,6 +34,7 @@ func (handler *HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.
 	var session string
 
 	path := request.URL.Path
+	path = strings.Replace(path, "//", "/", 0)
 	moduleInfos := strings.Split(path, "/")
 	if len(moduleInfos) > 2 {
 		module = moduleInfos[1]

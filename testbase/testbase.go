@@ -138,6 +138,7 @@ func BuildIPublishMessage(c *service.Client, value interface{}, module string, m
 		Func:   method,
 		Params: value,
 	}
+	log.Info("Build Request Msg :  %v",msg)
 	var err error
 	data, err := json.Marshal(msg)
 	aesCipher, _ := aes.NewAesEncrypt(c.GetSession().AesKey)
@@ -158,7 +159,7 @@ func BuildIPublishMessage(c *service.Client, value interface{}, module string, m
 func InitConnect(t *testing.T) (*service.Client, chan *gate.AllResponse) {
 	c := InitClient()
 	if c == nil {
-		t.Fatal("clint build fail")
+		t.Fatal("client build fail")
 	}
 	checkChan := make(chan *gate.AllResponse)
 	SubI(c, checkChan)
@@ -166,6 +167,7 @@ func InitConnect(t *testing.T) (*service.Client, chan *gate.AllResponse) {
 }
 
 func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllResponse) {
+
 	c, checkChan := InitConnect(t)
 	var err error
 	user := &base.BaseUser{
@@ -180,6 +182,7 @@ func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllRespons
 }
 
 func SendMessage(c *service.Client, checkChan chan *gate.AllResponse, publishMessage *message.PublishMessage) (err error, response *gate.AllResponse) {
+
 	err = c.Publish(publishMessage, nil)
 	var allrespon *gate.AllResponse
 	allrespon = <-checkChan
