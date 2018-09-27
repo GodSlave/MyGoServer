@@ -69,7 +69,7 @@ func (m *Gate) Run(closeSig chan bool) {
 		Services:         utils.NewBeeMap(),
 	}
 
- 	go m.svr.ListenAndServeWebSocket(":1885")
+	go m.svr.ListenAndServeWebSocket(":1885")
 
 	// Listen and serve connections at localhost:1883
 	addr := m.GetModuleSettings().Settings["TCPAddr"].(string)
@@ -298,12 +298,28 @@ func (m *Gate) SetOnDisConnectCallBack(callback module.ConnectEventCallBack) {
 }
 
 func (m *Gate) PushMessage(userId string, item *base.PushItem) {
-	value, exits := m.sessidMap[userId]
-	key := userId
-	if exits {
-		key = value
+	redisConn, err := m.redisPool.Dial()
+	if err != nil {
+		log.Error(err.Error())
+		return
 	}
+	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+userId))
+	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+userId))
+	var key string
+	if token != "" || session != "" {
+		value, exits := m.sessidMap[token]
+		if exits {
+			key = value
+		}
 
+		value, exits = m.sessidMap[token]
+		if exits {
+			key = value
+		}
+	}
+	if key == "" {
+		key = userId
+	}
 	service := m.getService(key)
 	if service != nil {
 		topic := []byte{'p'}
@@ -321,10 +337,27 @@ func (m *Gate) PushMessage(userId string, item *base.PushItem) {
 }
 
 func (m *Gate) PushMessagef(userId string, item *base.PushItem) {
-	value, exits := m.sessidMap[userId]
-	key := userId
-	if exits {
-		key = value
+	redisConn, err := m.redisPool.Dial()
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+userId))
+	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+userId))
+	var key string
+	if token != "" || session != "" {
+		value, exits := m.sessidMap[token]
+		if exits {
+			key = value
+		}
+
+		value, exits = m.sessidMap[token]
+		if exits {
+			key = value
+		}
+	}
+	if key == "" {
+		key = userId
 	}
 	service := m.getService(key)
 	if service != nil {
@@ -343,7 +376,7 @@ func (m *Gate) PushMessagef(userId string, item *base.PushItem) {
 		realContent := make([]byte, len(pushes)+2)
 		realContent[0] = item.Module
 		realContent[1] = item.PushType
-		copy(realContent[2:],pushes)
+		copy(realContent[2:], pushes)
 		log.Info("%v", realContent)
 		m.WriteMsg(topic, realContent, 0, service.GetSession())
 	} else {
@@ -393,4 +426,3 @@ func (m *Gate) GetExecuting() int64 {
 	}
 	return 0
 }
-

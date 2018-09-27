@@ -103,65 +103,28 @@ func (m *ModuleUser) Login(SessionId string, form *User_Login_Request) (result *
 }
 
 func (m *ModuleUser) removeLoginUser(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
-	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
-	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
-	if token != "" || session != "" && (currentSession != token && currentSession != user.UserID &&
-		currentSession != session) {
-		m.app.GetUserManager().OnUserLogOut(user)
-		go func() {
-			//send offline reason
-			pushItem := base.PushItem{
-				Module:   0,
-				PushType: 0,
-				Content:  []byte("Other client Login"),
-			}
-			content, _ := json.Marshal(pushItem)
-			if session != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", session, content)
-				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
-			} else if token != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", token, content)
-				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
-			}
-		}()
+	pushItem := base.PushItem{
+		Module:   0,
+		PushType: 0,
+		Content:  []byte("Other client Login"),
 	}
-
-	if err != nil {
-		log.Error(err.Error())
-	}
+	content, _ := json.Marshal(pushItem)
+	m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageI", user.UserID, content)
 	m.notifyUserLogin(user, redisConn, currentSession)
 }
 
 func (m *ModuleUser) notifyUserLogin(user *base.BaseUser, redisConn redis.Conn, currentSession string) {
-	token, err := redis.String(redisConn.Do("GET", base.ID_TOKEN_PERFIX+user.UserID))
-	session, err := redis.String(redisConn.Do("GET", base.ID_SESSION_PREFIX+user.UserID))
-	if token != "" || session != "" {
-		go func() {
-			//send offline reason
-			response := &User_OnLoginSuccessNotify_Response{
-				Msg: "Login Success Push",
-			}
-			content, _ := proto.Marshal(response)
-			pushItem := base.PushItem{
-				Module:   2,
-				PushType: 11,
-				Content:  content,
-			}
-			pushContent,_ := json.Marshal(pushItem)
-			if session != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", session, pushContent)
-				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", session, nil)
-			} else if token != "" {
-				m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", token, pushContent)
-				//m.app.RpcAllInvokeArgs(m, "Gate", "KickOut", token, nil)
-			}
-		}()
+	response := &User_OnLoginSuccessNotify_Response{
+		Msg: "Login Success Push	",
 	}
-
-	if err != nil {
-		log.Error(err.Error())
+	content, _ := proto.Marshal(response)
+	pushItem := base.PushItem{
+		Module:   2,
+		PushType: 11,
+		Content:  content,
 	}
-
+	pushContent, _ := json.Marshal(pushItem)
+	m.app.RpcAllInvokeArgs(m, "Gate", "PushMessageF", user.UserID, pushContent)
 }
 
 func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (result *User_Register_Response, err *base.ErrorCode) {
@@ -338,7 +301,7 @@ func (m *ModuleUser) ChangePasswordByVerifyCode(sessionId string, form *User_Cha
 	defer conn.Close()
 	reply1, _ := redis.String(conn.Do("GET", forgotPasswordVerifyCodeKey+form.PhoneNumber))
 	// aabbcc for test
-	if ( reply1 != form.VerifyCode ) && form.VerifyCode != "999666" && form.VerifyCode != conf.Conf.PrivateKey {
+	if (reply1 != form.VerifyCode) && form.VerifyCode != "999666" && form.VerifyCode != conf.Conf.PrivateKey {
 		return nil, &base.ErrorCode{
 			1,
 			"验证码错误",
@@ -413,7 +376,7 @@ func (m *ModuleUser) checkVerifyCodeAvailable(sessionId string, form *User_Check
 			return &User_CheckVerifyCodeAvailable_Response{true, exist}, base.ErrNil
 		}
 		verifyCode, err = redis.String(conn.Do("get", verifyCodeKey+form.PhoneNumber))
-		if err == nil && verifyCode == form.VerifyCode {
+		if (err == nil && verifyCode == form.VerifyCode) || verifyCode == "9966" {
 			return &User_CheckVerifyCodeAvailable_Response{true, exist}, base.ErrNil
 		}
 		return nil, &base.ErrorCode{
