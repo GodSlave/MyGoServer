@@ -1,8 +1,12 @@
 package main
 
 import (
-	"github.com/GodSlave/MyGoServer/template"
-	"github.com/GodSlave/MyGoServer/base"
+	"github.com/GodSlave/MyGoServer/app"
+	"github.com/GodSlave/MyGoServer/module/gate"
+	"github.com/GodSlave/MyGoServer/module/httpGate"
+	"github.com/GodSlave/MyGoServer/module/userModule"
+	"github.com/GodSlave/MyGoServer/module/web"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -11,10 +15,10 @@ var (
 )
 
 func main() {
-	//app := app2.NewApp()
-	//web_Module := web.Module()
-	//webModule := web_Module.(*web.ModuleWeb)
-	//webModule.Router = gin.Default()
-	//app.Run(gate.Module(), userModule.Module(), httpGate.Module(), web_Module)
-	template.BuildModel(base.BaseUser{},"User")
+	app := app.NewApp()
+	web_Module := web.Module()
+	webModule := web_Module.(*web.ModuleWeb)
+	webModule.Router = gin.Default()
+	app.Run(gate.Module(), userModule.Module(), httpGate.Module(), web_Module)
+	//template.BuildModel(base.BaseUser{},"User")
 }

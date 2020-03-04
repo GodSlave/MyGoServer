@@ -14,7 +14,7 @@
 package log
 
 import (
-	"github.com/GodSlave/MyGoServer/logger/ozzo-log"
+	"github.com/go-ozzo/ozzo-log"
 )
 
 var mqlog *log.Logger

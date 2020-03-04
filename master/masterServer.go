@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 	"encoding/json"
-	"github.com/influxdata/influxdb/client/v2"
+	//"github.com/influxdata/influxdb/client/v2"
 	"strings"
 )
 
@@ -30,7 +30,7 @@ type DefaultMasterServer struct {
 	masterConfig conf.Master
 	Modules      map[string][]OtherModuleInfo
 	appLostCheck map[string]int
-	client       client.Client
+//	client       client.Client
 }
 
 func NewMaster(serverId string, masterConf conf.Master) Master {
@@ -43,21 +43,21 @@ func NewMaster(serverId string, masterConf conf.Master) Master {
 	redisUrl := masterConf.RedisUrl
 	master.redisPool = utils.GetRedisFactory().GetPool(redisUrl)
 	master.serverId = serverId
-	fluxclient, err := client.NewHTTPClient(
-		client.HTTPConfig{
-			Addr:     masterConf.DBConfig.Addr,
-			Username: masterConf.DBConfig.UserName,
-			Password: masterConf.DBConfig.Password,
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-	master.client = fluxclient
-
-	if err != nil {
-		panic(err)
-	}
+	//fluxclient, err := client.NewHTTPClient(
+	//	client.HTTPConfig{
+	//		Addr:     masterConf.DBConfig.Addr,
+	//		Username: masterConf.DBConfig.UserName,
+	//		Password: masterConf.DBConfig.Password,
+	//	},
+	//)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//master.client = fluxclient
+	//
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	master.rpcClient, _ = defaultrpc.NewRedisClient(masterConf.RedisPubSubConf)
 	master.call_chan = make(chan mqrpc.CallInfo, 10)
@@ -224,32 +224,32 @@ func (m *DefaultMasterServer) tickServerStatus() {
 		m.publicMessage(UpdateStatus, MasterStr, tempStatus, m.rpcClient)
 
 		//report for statistic
-		go func(onLineUser int) {
-			bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-				Database:  conf.Conf.Master.DBConfig.DBName,
-				Precision: "s",
-			})
-			if err != nil {
-				log.Error(err.Error())
-			}
-			pt, err := client.NewPoint("appInfo", nil, fields, time.Now())
-			if err == nil {
-				bp.AddPoint(pt)
-			} else {
-				log.Error(err.Error())
-			}
-			onLineUserInfo := map[string]interface{}{"OnLineUser": onLineUser}
-			pt2, err := client.NewPoint("OnLineUser", nil, onLineUserInfo, time.Now())
-			if err == nil {
-				bp.AddPoint(pt2)
-			} else {
-				log.Error(err.Error())
-			}
-			err = m.client.Write(bp)
-			if err != nil {
-				log.Error(err.Error())
-			}
-		}(onLineUser)
+		//go func(onLineUser int) {
+		//	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+		//		Database:  conf.Conf.Master.DBConfig.DBName,
+		//		Precision: "s",
+		//	})
+		//	if err != nil {
+		//		log.Error(err.Error())
+		//	}
+		//	pt, err := client.NewPoint("appInfo", nil, fields, time.Now())
+		//	if err == nil {
+		//		bp.AddPoint(pt)
+		//	} else {
+		//		log.Error(err.Error())
+		//	}
+		//	onLineUserInfo := map[string]interface{}{"OnLineUser": onLineUser}
+		//	pt2, err := client.NewPoint("OnLineUser", nil, onLineUserInfo, time.Now())
+		//	if err == nil {
+		//		bp.AddPoint(pt2)
+		//	} else {
+		//		log.Error(err.Error())
+		//	}
+		//	err = m.client.Write(bp)
+		//	if err != nil {
+		//		log.Error(err.Error())
+		//	}
+		//}(onLineUser)
 	}
 }
 

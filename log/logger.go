@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/GodSlave/MyGoServer/logger/ozzo-log"
+	"github.com/go-ozzo/ozzo-log"
 	"time"
 )
 
@@ -19,7 +19,6 @@ func NewDefaultLogger()(*log.Logger)  {
 	logger := log.NewLogger()
 	logger.CallStackDepth = 3
 	t1 := log.NewConsoleTarget()
-	t1.MinLevel = log.LevelNotice
 	t1.MaxLevel = log.LevelDebug
 	logger.Targets = append(logger.Targets, t1)
 	return logger
@@ -39,10 +38,8 @@ func (m *MqantLog) GetLogger(debug bool, ProcessID string, Logdir string) {
 		t2 := log.NewFileTarget()
 		t2.FileName = fmt.Sprintf("%s/%s.error.log", Logdir, ProcessID)
 		t2.MaxLevel = log.LevelWarning
-		t2.MinLevel = log.LevelEmergency
 		t3 := log.NewFileTarget()
 		t3.FileName = fmt.Sprintf("%s/%s.access.log", Logdir, ProcessID)
-		t3.MinLevel = log.LevelNotice
 		t3.MaxLevel = log.LevelDebug
 		logger.Targets = append(logger.Targets, t2, t3)
 	}
@@ -53,7 +50,7 @@ func (m *MqantLog) GetLogger(debug bool, ProcessID string, Logdir string) {
 		if e.Level <= log.LevelWarning {
 			return fmt.Sprintf("%v [%v][%v] %v %v", e.Time.Format(time.RFC3339), e.Level,ProcessID, e.Message, e.CallStack)
 		} else {
-			return fmt.Sprintf("%v [%v][%v][%v] %v", e.Time.Format(time.RFC3339), e.Level,ProcessID, e.ShortFile, e.Message)
+			return fmt.Sprintf("%v [%v][%v][%v] %v", e.Time.Format(time.RFC3339), e.Level,ProcessID, e.FormattedMessage, e.Message)
 		}
 	})
 	m.Logger = logger
