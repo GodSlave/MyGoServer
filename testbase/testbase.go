@@ -138,7 +138,7 @@ func BuildIPublishMessage(c *service.Client, value interface{}, module string, m
 		Func:   method,
 		Params: value,
 	}
-	log.Info("Build Request Msg :  %v",msg)
+	log.Info("Build Request Msg :  %v", msg)
 	var err error
 	data, err := json.Marshal(msg)
 	aesCipher, _ := aes.NewAesEncrypt(c.GetSession().AesKey)
@@ -181,6 +181,17 @@ func Login(t *testing.T) (*service.Client, *base.BaseUser, chan *gate.AllRespons
 	return c, user, checkChan
 }
 
+func LoginUser(t *testing.T, user *base.BaseUser) (*service.Client, chan *gate.AllResponse) {
+
+	c, checkChan := InitConnect(t)
+	var err error
+	err = LoginI(c, user, checkChan)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	return c, checkChan
+}
+
 func SendMessage(c *service.Client, checkChan chan *gate.AllResponse, publishMessage *message.PublishMessage) (err error, response *gate.AllResponse) {
 
 	err = c.Publish(publishMessage, nil)
@@ -200,4 +211,28 @@ func SendMessageWithCheck(c *service.Client, checkChan chan *gate.AllResponse, p
 	}
 	t.Log(string(respons1.Result))
 	return respons1
+}
+
+func RegisterUser(t *testing.T, user1 *base.BaseUser) (err error, client *service.Client, checkChan chan *gate.AllResponse) {
+	c, checkChan := InitConnect(t)
+	fmt.Println("start register")
+	login := &userModule.User_Register_Request{
+		Username:   user1.Name,
+		Password:   user1.Password,
+		VerifyCode: "9966",
+	}
+	err = c.Publish(BuildIPublishMessage(c, login, "User", "Register"), nil)
+	log.Info("wait response ")
+	var allrespon *gate.AllResponse
+	allrespon = <-checkChan
+	fmt.Println("register Response", allrespon.State)
+	fmt.Printf("%v", allrespon)
+	response := &userModule.User_Register_Response{
+	}
+	err = json.Unmarshal(allrespon.Result, response)
+	if err != nil {
+		return err,c, checkChan
+	}
+	user1.UserID = response.Result
+	return err, c, checkChan
 }

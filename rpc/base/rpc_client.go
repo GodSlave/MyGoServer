@@ -24,6 +24,7 @@ import (
 	"github.com/GodSlave/MyGoServer/rpc"
 	"github.com/GodSlave/MyGoServer/module"
 	"github.com/GodSlave/MyGoServer/base"
+
 )
 
 type RPCClient struct {
@@ -62,6 +63,7 @@ func (c *RPCClient) NewLocalClient(server mqrpc.RPCServer) (err error) {
 	}
 	return
 }
+
 
 func (c *RPCClient) NewRedisClient(info *conf.Redis) (err error) {
 	//创建本地连接
