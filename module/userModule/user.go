@@ -129,7 +129,7 @@ func (m *ModuleUser) notifyUserLogin(user *base.BaseUser, redisConn redis.Conn, 
 
 func (m *ModuleUser) Register(SessionId string, form *User_Register_Request) (result *User_Register_Response, err *base.ErrorCode) {
 
-	if len(form.Username) < 8 || len(form.Password) < 8 {
+	if len(form.Username) < 4 || len(form.Password) < 4 {
 		return nil, base.ErrNameOrPwdShort
 	}
 	user := &base.BaseUser{}
@@ -386,5 +386,5 @@ func (m *ModuleUser) checkVerifyCodeAvailable(sessionId string, form *User_Check
 	}
 
 	return nil, base.ErrSQLERROR
-
 }
+

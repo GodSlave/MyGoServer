@@ -14,6 +14,7 @@ type BaseUser struct {
 	Phone     string `xorm:"index"`
 	Password  string `xorm:"notnull"`
 	UserID    string `xorm:"unique index notnull"`
+	Age       int32  `xorm:"notnull"`
 	Id        int64
 	CreatTime int64
 }
