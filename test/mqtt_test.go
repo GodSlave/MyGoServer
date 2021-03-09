@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/GodSlave/MyGoServer/mqtt/service"
+	"strconv"
 	"testing"
 	app2 "github.com/GodSlave/MyGoServer/app"
 	"github.com/GodSlave/MyGoServer/module/gate"
@@ -37,8 +38,11 @@ func TestUUID(t *testing.T) {
 	fmt.Println(uuid.RandNumbers(20))
 }
 
-func TestJson(t *testing.T) {
-	numberOfClient := 1
+
+func TestRegister(t *testing.T) {
+	startTime :=time.Now().UnixNano()
+
+	numberOfClient := 500
 	wg := sync.WaitGroup{}
 	wg.Add(numberOfClient)
 	for i := 0; i < numberOfClient; i++ {
@@ -49,9 +53,9 @@ func TestJson(t *testing.T) {
 			testbase.SubI(c, checkChan)
 			time.Sleep(1 * time.Second)
 			user := &base.BaseUser{
-				//Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
+				Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
 				//Password: "woaini1232" + strconv.Itoa(index),
-				Name:     "zhanglin",
+				//Name:     "zhanglin",
 				Password: "woaini1232",
 			}
 			err := RegisterI(c, user, checkChan)
@@ -62,6 +66,46 @@ func TestJson(t *testing.T) {
 		}(i, &wg)
 	}
 	wg.Wait()
+
+	useTime := time.Now().UnixNano()-startTime
+	fmt.Println()
+	fmt.Println("Use Time ",useTime)
+}
+
+func TestGetInfo(t *testing.T) {
+
+
+	numberOfClient := 5000
+	wg := sync.WaitGroup{}
+	wg.Add(numberOfClient)
+	c := testbase.InitClient()
+	time.Sleep(1 * time.Second)
+	checkChan := make(chan *gate.AllResponse)
+	testbase.SubI(c, checkChan)
+	time.Sleep(1 * time.Second)
+	user := &base.BaseUser{
+		//Name:     "zhanglin" + strconv.Itoa(index) + uuid.SafeString(5),
+		//Password: "woaini1232" + strconv.Itoa(index),
+		Name:     "zhanglin",
+		Password: "woaini1232",
+	}
+	time.Sleep(1 * time.Second)
+	startTime :=time.Now().UnixNano()
+	testbase.LoginI(c,user,checkChan)
+	for i := 0; i < numberOfClient; i++ {
+		go func(index int, wg *sync.WaitGroup) {
+			err := GetSelfInfoI(c, checkChan)
+			if err != nil {
+				log.Error(err.Error())
+			}
+			wg.Done()
+		}(i, &wg)
+	}
+	wg.Wait()
+
+	useTime := time.Now().UnixNano()-startTime
+	fmt.Println()
+	fmt.Println("Use Time ",useTime)
 	//testbase.LoginI(c, userModule, checkChan)
 	//GetSelfInfoI(c, checkChan)
 }
